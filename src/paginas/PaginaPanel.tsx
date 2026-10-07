@@ -18,6 +18,12 @@ export default function PaginaPanel() {
       estado: 'Proximamente',
     },
     {
+      titulo: 'Definir puntos de entrega',
+      descripcion: 'Mapa interactivo con marcadores arrastrables para origen y destino.',
+      estado: 'Disponible',
+      enlace: '/puntos',
+    },
+    {
       titulo: 'Mis pedidos',
       descripcion: 'Seguimiento del estado de cada entrega en curso.',
       estado: 'Proximamente',
@@ -70,13 +76,42 @@ export default function PaginaPanel() {
           {modulos.map((modulo) => (
             <article
               key={modulo.titulo}
-              className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+              className={`rounded-xl border bg-white p-5 shadow-sm ${
+                'enlace' in modulo ? 'border-emerald-200' : 'border-slate-200'
+              }`}
             >
-              <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                {modulo.estado}
-              </span>
+              <div className="flex items-center justify-between gap-2">
+                <span
+                  className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+                    'enlace' in modulo
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  {modulo.estado}
+                </span>
+              </div>
               <h2 className="mt-3 font-semibold text-slate-900">{modulo.titulo}</h2>
               <p className="mt-1 text-sm text-slate-600">{modulo.descripcion}</p>
+
+              {'enlace' in modulo && (
+                <Link
+                  to={modulo.enlace}
+                  className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-marca-700 underline-offset-4 hover:underline"
+                >
+                  Abrir el mapa
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    strokeWidth={2}
+                    stroke="currentColor"
+                    className="size-4"
+                  >
+                    <path d="m9 6 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </Link>
+              )}
             </article>
           ))}
         </div>

@@ -114,6 +114,37 @@ repositorio, igual que el microservicio de Drones.
 
 **Construcción de la interfaz web responsiva para el acceso de clientes.**
 
+### Mapa interactivo de puntos de entrega
+
+| Criterio de aceptación | Implementación |
+| --- | --- |
+| Arrastrar o hacer clic sobre el mapa actualiza las coordenadas de origen y destino en tiempo real | `SelectorPuntos.tsx`: los marcadores son `draggable` y el `click` del mapa coloca el punto activo |
+| Carga correcta de las baldosas de OpenStreetMap sin retrasos visuales | `TileLayer` de OSM con overlay de carga que solo se muestra en la primera pintada, nunca al desplazar |
+
+Sobre el mapa:
+
+- Ruta `/puntos`, protegida por sesión y rol `cliente`. Se llega desde el panel del cliente.
+- Marcadores propios con `divIcon` (verde = origen A, rojo = destino B). Evita el fallo clásico de
+  las rutas de imágenes de Leaflet al empaquetar con Vite y da las etiquetas legibles.
+- La línea punteada une A y B y la distancia se calcula en vivo con la **misma fórmula de
+  Haversine y el mismo radio terrestre que `app/cotizador.py`**, para que lo que ve el cliente
+  antes de confirmar coincida con lo que calcula el backend.
+- Las coordenadas salen redondeadas a 6 decimales y se validan con los mismos rangos que
+  `_validar_coordenadas` del backend (latitud ±90, longitud ±180).
+- Si OpenStreetMap no responde, se avisa en lugar de dejar un rectángulo gris y se sugiere
+  escribir las coordenadas a mano.
+- Atribución a OpenStreetMap visible, como exige su política de uso.
+
+Fuera de alcance según la issue: mapas 3D y capas satelitales de pago.
+
+El formulario completo de solicitud (peso, categoría, urgencia y cotización) llega en su issue;
+esta pantalla ya produce el payload con la forma que espera `POST /api/v1/pedidos`:
+`{origen: {latitud, longitud}, destino: {latitud, longitud}}`.
+
+### Autenticación
+
+**Construcción de la interfaz web responsiva para el acceso de clientes.**
+
 | Criterio de aceptación | Implementación |
 | --- | --- |
 | El usuario se registra correctamente y es redirigido al panel del cliente tras el login | `PaginaRegistro.tsx` encadena `POST /auth/register` + `POST /auth/login` y navega a `/panel` |
@@ -152,10 +183,11 @@ src/
 │   ├── token.ts              Decodificacion y expiracion del JWT
 │   └── SesionContext.tsx     Sesion persistida en localStorage
 ├── componentes/
+│   ├── mapa/                 SelectorPuntos (Leaflet + OSM), marcadores y geometria
 │   ├── avisos/               Toasts de exito / error / info
 │   ├── formularios/          Campo reutilizable y reglas de validacion
 │   └── ui/
-├── paginas/                  Login, Registro, Panel, Sin acceso, 404
+├── paginas/                  Login, Registro, Panel, Puntos, Sin acceso, 404
 └── rutas/Guardias.tsx        Rutas protegidas y publicas segun rol
 ```
 
@@ -173,6 +205,18 @@ src/
   inalcanzables desde este portal (requisito del Objetivo 3).
 - **Errores centralizados.** `ErrorApi` traduce cualquier fallo de red, timeout o respuesta
   no 2xx a un mensaje presentable, reutilizando el `message` que estandariza el backend.
+- **El mapa es un componente reutilizable.** `SelectorPuntos` no depende de la página que lo
+  hospeda: recibe `origen`, `destino`, `activo` y `onChange`, de modo que la issue del
+  formulario de solicitud solo tiene que embeberlo sin duplicar la lógica geográfica.
+
+## Verificación
+
+Ambas issues se comprobaron con Chrome headless sobre el backend local:
+
+- Autenticación: 12/12 (registro, login, 401 en toast, sesión persistente, rutas protegidas, logout).
+- Mapa: 18/18 (teselas OSM 15/15 en HTTP 200, clic y arrastre actualizando coordenadas en vivo,
+  marcadores A y B en ubicaciones distintas, payload con la forma del backend, rangos válidos,
+  layout móvil a 390 px sin desbordamiento horizontal y sin errores de consola).
 
 
 
