@@ -1,0 +1,62 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-marca-50: oklch(0.97 0.02 250);
+  --color-marca-100: oklch(0.93 0.05 250);
+  --color-marca-200: oklch(0.87 0.09 250);
+  --color-marca-500: oklch(0.62 0.17 255);
+  --color-marca-600: oklch(0.55 0.19 258);
+  --color-marca-700: oklch(0.47 0.19 260);
+  --color-marca-900: oklch(0.32 0.14 262);
+
+  --font-sans:
+    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-slate-100 font-sans text-slate-900 antialiased;
+  }
+
+  /* Foco visible solo por teclado: mejora la accesibilidad sin ensuciar el mouse. */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-marca-600;
+  }
+}
+
+@layer components {
+  .campo-label {
+    @apply mb-1.5 block text-sm font-medium text-slate-700;
+  }
+
+  .campo-input {
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm
+      text-slate-900 shadow-sm transition
+      placeholder:text-slate-400
+      focus:border-marca-600 focus:ring-2 focus:ring-marca-600/20 focus:outline-none
+      disabled:cursor-not-allowed disabled:bg-slate-100;
+  }
+
+  .campo-error {
+    @apply border-red-400 focus:border-red-500 focus:ring-red-500/20;
+  }
+}
+
+@utility animacion-entrada {
+  animation: entrada 180ms ease-out;
+}
+
+@keyframes entrada {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

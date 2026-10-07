@@ -102,6 +102,78 @@ Específico: Empaquetar cada microservicio, el frontend y las bases de datos en 
 Medible: Generar un archivo docker-compose.yml funcional que permita orquestar y levantar el 100% de la infraestructura con un único comando (docker-compose up) en un tiempo máximo de 3 minutos en la computadora de exposición.
 Alcanzable / Relevante: Facilita la portabilidad y evita el clásico problema de "en mi máquina sí funcionaba".
 
+---
+
+# Frontend-Request · Portal web del cliente
+
+Este repositorio contiene el frontend del **cliente**: registro, inicio de sesión y panel
+de usuario. El panel del operador (flota de drones, consola de despacho) vive en otro
+repositorio, igual que el microservicio de Drones.
+
+## Issue cubierta
+
+**Construcción de la interfaz web responsiva para el acceso de clientes.**
+
+| Criterio de aceptación | Implementación |
+| --- | --- |
+| El usuario se registra correctamente y es redirigido al panel del cliente tras el login | `PaginaRegistro.tsx` encadena `POST /auth/register` + `POST /auth/login` y navega a `/panel` |
+| Errores de autenticación se muestran mediante mensajes emergentes | `Avisos.tsx` (toasts accesibles con `role="alert"`), alimentados por `ErrorApi` |
+| Formularios responsivos | Layout de dos columnas en escritorio, columna única en móvil (verificado a 390 px sin scroll horizontal) |
+| Conexión con `POST /auth/login` y `POST /auth/register` | `src/servicios/auth.ts` |
+| Sesión en LocalStorage | `SesionContext.tsx` + `sesion/token.ts` |
+
+Fuera de alcance según la issue: recuperación de contraseña por SMS o correo.
+
+## Puesta en marcha
+
+```bash
+npm install
+cp .env.example .env      # ajustar VITE_API_PROXY_TARGET si el backend no esta en :3001
+npm run dev               # http://localhost:5173
+```
+
+Requiere el microservicio de Pedidos levantado (por defecto en `http://localhost:3001`).
+Para apuntar a otro host durante la presentación, sin recompilar:
+
+```bash
+VITE_API_PROXY_TARGET=http://192.168.220.131:3001 npm run dev
+```
+
+Otros comandos: `npm run build` (bundle de producción), `npm run typecheck` (TypeScript estricto).
+
+## Arquitectura
+
+```
+src/
+├── servicios/
+│   ├── clienteHttp.ts        Cliente HTTP: timeouts, token Bearer y errores homogeneos
+│   └── auth.ts               Contrato de /auth/login y /auth/register
+├── sesion/
+│   ├── token.ts              Decodificacion y expiracion del JWT
+│   └── SesionContext.tsx     Sesion persistida en localStorage
+├── componentes/
+│   ├── avisos/               Toasts de exito / error / info
+│   ├── formularios/          Campo reutilizable y reglas de validacion
+│   └── ui/
+├── paginas/                  Login, Registro, Panel, Sin acceso, 404
+└── rutas/Guardias.tsx        Rutas protegidas y publicas segun rol
+```
+
+### Decisiones de diseño
+
+- **La sesión vive en localStorage**, tal como pide la issue. El token se envia en
+  `Authorization: Bearer` desde `clienteHttp.ts`, de modo que los próximos módulos
+  (pedidos, cotizador) ya quedan autenticados sin cambios.
+- **El perfil se lee del JWT.** El backend solo expone `/auth/login` y `/auth/register`
+  (no hay `/auth/me`), así que `token.ts` decodifica el payload para mostrar el correo y
+  aplicar expiración. La validación criptográfica sigue estando en el backend: el token
+  nunca se considera confiable para autorizar nada.
+- **Aislamiento por rol.** `RutaProtegida` exige rol `cliente`; un JWT con rol `operador`
+  es derivado a `/sin-acceso`, de modo que las funciones administrativas quedan
+  inalcanzables desde este portal (requisito del Objetivo 3).
+- **Errores centralizados.** `ErrorApi` traduce cualquier fallo de red, timeout o respuesta
+  no 2xx a un mensaje presentable, reutilizando el `message` que estandariza el backend.
+
 
 
 
