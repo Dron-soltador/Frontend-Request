@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, Marker, Polyline, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import type { Map as LeafletMap } from 'leaflet'
@@ -23,6 +23,12 @@ export interface SelectorPuntosProps {
   /** Direccion legible de cada punto, mostrada al pasar el cursor sobre el marcador. */
   direccionOrigen?: string
   direccionDestino?: string
+  /**
+   * Se incrementa cuando los puntos cambian fuera del mapa (por ejemplo al elegir
+   * una direccion buscada o al recuperar un borrador) para que la vista se
+   * reajuste. El clic ya reencuadra por su cuenta.
+   */
+  revisionEncuadre?: number
   className?: string
 }
 
@@ -30,6 +36,44 @@ export interface SelectorPuntosProps {
  * Convierte los clics del mapa en coordenadas. Se monta dentro de MapContainer
  * porque `useMapEvents` necesita el contexto del mapa.
  */
+/**
+ * Reajusta la vista cuando los puntos cambian sin que el usuario toque el mapa:
+ * al elegir una direccion buscada o al recuperar un borrador guardado. Sin esto
+ * el marcador se dibuja fuera del encuadre y el cliente no ve donde quedo.
+ */
+function EncuadrePorRevision({
+  origen,
+  destino,
+  revision,
+}: {
+  origen: Punto | null
+  destino: Punto | null
+  revision: number
+}) {
+  const mapa = useMap()
+
+  useEffect(() => {
+    if (revision === 0) return
+
+    const puntos = [origen, destino].filter((punto): punto is Punto => esPuntoValido(punto))
+
+    if (puntos.length === 1) {
+      mapa.setView([puntos[0].latitud, puntos[0].longitud], 15)
+    } else if (puntos.length === 2) {
+      mapa.fitBounds(
+        L.latLngBounds(
+          puntos.map((punto) => [punto.latitud, punto.longitud] as [number, number]),
+        ),
+        { padding: [56, 80], maxZoom: 16, animate: false },
+      )
+    }
+    // Solo reacciona a `revision`: las coordenadas llegan en el mismo cambio y
+    // reencuadrar en cada render moveria el mapa sin que nada lo justifique.
+  }, [revision, mapa, origen, destino])
+
+  return null
+}
+
 /**
  * Capa interna del mapa: traduce los clics en coordenadas y reajusta la vista
  * para que ambos puntos queden visibles. Se monta dentro de `MapContainer` porque
@@ -88,6 +132,7 @@ export function SelectorPuntos({
   onActivoChange,
   direccionOrigen,
   direccionDestino,
+  revisionEncuadre = 0,
   className = 'h-[26rem] sm:h-[32rem]',
 }: SelectorPuntosProps) {
   const [cargandoInicial, setCargandoInicial] = useState(true)
@@ -178,6 +223,7 @@ export function SelectorPuntos({
         />
 
         <CapaSeleccion alSeleccionar={manejarClic} />
+        <EncuadrePorRevision origen={origen} destino={destino} revision={revisionEncuadre} />
 
         {esPuntoValido(origen) && (
           <Marker

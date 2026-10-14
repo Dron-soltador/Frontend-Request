@@ -4,24 +4,20 @@ import { Marca } from './LayoutAutenticacion'
 import { useSesion } from '../sesion/SesionContext'
 
 /**
- * Cabecera del portal del cliente. La issue #1 solo habilita el acceso, asi que el
- * cuerpo es un marcador de posicion; los modulos de cotizacion, flota y calendario
- * se incorporan aqui en sus respectivas issues sin romper el layout.
+ * Cabecera del portal del cliente. El cuerpo es un marcador de posicion; los
+ * modulos de pedidos, flota y calendario se incorporan aqui en sus respectivas
+ * issues sin romper el layout.
  */
 export default function PaginaPanel() {
   const { email, cerrarSesion } = useSesion()
 
+  // La solicitud de envio vive en una sola seccion, no fragmentada en modulos.
   const modulos = [
     {
-      titulo: 'Cotizar y solicitar envio',
-      descripcion: 'Peso, categoria, urgencia y puntos A/B en el mapa.',
-      estado: 'Proximamente',
-    },
-    {
-      titulo: 'Definir puntos de entrega',
-      descripcion: 'Mapa interactivo con marcadores arrastrables para origen y destino.',
+      titulo: 'Hacer un pedido',
+      descripcion: 'Define el origen y el destino en el mapa y guarda el pedido en tu sesion.',
       estado: 'Disponible',
-      enlace: '/puntos',
+      enlace: '/pedido',
     },
     {
       titulo: 'Mis pedidos',

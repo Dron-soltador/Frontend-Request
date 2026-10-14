@@ -4,7 +4,7 @@ import { Avisos } from './componentes/avisos/Avisos'
 import PaginaLogin from './paginas/PaginaLogin'
 import PaginaNoEncontrada from './paginas/PaginaNoEncontrada'
 import PaginaPanel from './paginas/PaginaPanel'
-import PaginaPuntos from './paginas/PaginaPuntos'
+import PaginaPedido from './paginas/PaginaPedido'
 import PaginaRegistro from './paginas/PaginaRegistro'
 import PaginaSinAcceso from './paginas/PaginaSinAcceso'
 import { RutaProtegida, RutaPublica } from './rutas/Guardias'
@@ -45,10 +45,20 @@ export default function App() {
           />
 
           <Route
+            path="/pedido"
+            element={
+              <RutaProtegida>
+                <PaginaPedido />
+              </RutaProtegida>
+            }
+          />
+
+          {/* Ruta anterior, se conserva para no romper enlaces ya compartidos. */}
+          <Route
             path="/puntos"
             element={
               <RutaProtegida>
-                <PaginaPuntos />
+                <Navigate to="/pedido" replace />
               </RutaProtegida>
             }
           />

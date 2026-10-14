@@ -124,14 +124,34 @@ repositorio, igual que el microservicio de Drones.
 El punto se puede fijar de tres maneras equivalentes: escribiendo una dirección, arrastrando el
 marcador o haciendo clic en el mapa.
 
+#### Sección única "Hacer un pedido"
+
+Ruta `/pedido`. La solicitud de envío vive en **una sola pantalla**, no fragmentada en módulos
+sueltos, y muestra el recorrido completo en pasos (1 Puntos de entrega, 2 Datos del paquete,
+3 Confirmar y enviar). Hoy solo el paso 1 está habilitado; los demás aparecen marcados para que
+se vea el camino que se completará en la issue del formulario.
+
+- **Guardar pedido**: persiste origen y destino en la sesión del navegador. Al salir de la sección
+  y volver, el borrador se recupera con sus marcadores. El botón se habilita solo con ambos puntos.
+- **Indicador de estado**: distingue *Pedido incompleto*, *Cambios sin guardar* y
+  *Pedido guardado en tu sesion*, con la hora relativa del guardado.
+- **Descartar**: borra el borrador y reinicia el formulario.
+- El guardado es una **acción explícita**: sin pulsar "Guardar pedido" nada se conserva, y la
+  interfaz lo dice. Se prefirió esto a un autoguardado invisible para que el cliente sepa qué está
+  persistido.
+- *Enviar pedido* aparece deshabilitado hasta que existan peso, categoría y fecha, que llegan con
+  la issue del formulario.
+
 Sobre el mapa:
 
-- Ruta `/puntos`, protegida por sesión y rol `cliente`. Se llega desde el panel del cliente.
+- Ruta `/pedido` (la antigua `/puntos` redirige allí), protegida por sesión y rol `cliente`.
 - Marcadores propios con `divIcon` (verde = origen A, rojo = destino B). Evita el fallo clásico de
   las rutas de imágenes de Leaflet al empaquetar con Vite y da las etiquetas legibles.
 - La línea punteada une A y B y la distancia se calcula en vivo con la **misma fórmula de
   Haversine y el mismo radio terrestre que `app/cotizador.py`**, para que lo que ve el cliente
   antes de confirmar coincida con lo que calcula el backend.
+- La vista se reajusta al hacer clic y también cuando los puntos cambian sin tocar el mapa
+  (dirección elegida o borrador recuperado), para que el marcador nunca quede fuera de cuadro.
 - Las coordenadas salen redondeadas a 6 decimales y se validan con los mismos rangos que
   `_validar_coordenadas` del backend (latitud ±90, longitud ±180).
 - Si OpenStreetMap no responde, se avisa en lugar de dejar un rectángulo gris y se sugiere
@@ -153,14 +173,18 @@ coincidencias y al elegir una el marcador salta a esa ubicación.
 
 #### Guardado de la localización
 
-`sesion/localizacion.ts`. Todo queda en el navegador, bajo las claves `dronedesde.ubicacion.*`:
+Dos mecanismos distintos, con responsabilidades separadas:
 
-- La selección actual (origen, destino y sus direcciones) se persiste sola: un F5 no borra el trabajo.
-- **Mis direcciones guardadas**: el cliente nombra sus direcciones ("Casa", "Oficina", "Depósito"),
-  las recupera con un clic y las elimina cuando quiere. Si guarda dos con el mismo nombre, se
-  actualiza la existente en lugar de duplicarla.
-- Las lecturas de `localStorage` van envueltas en `try/catch`: un JSON corrupto o el modo privado
-  del navegador no rompen la pantalla.
+- `sesion/borrador.ts` (`dronedesde.pedido.borrador`): el **pedido en curso**. Se escribe solo al
+  pulsar "Guardar pedido" y se recupera al volver a la sección. Si el cliente cierra la pestaña
+  sin enviar, el borrador se pierde a propósito: no dejamos pedidos a medias en la base de datos.
+- `sesion/localizacion.ts` (`dronedesde.ubicacion.guardadas`): las **direcciones reutilizables** a
+  largo plazo. El cliente las nombra ("Casa", "Oficina", "Depósito"), las recupera con un clic y
+  las elimina cuando quiere. Si guarda dos con el mismo nombre, se actualiza la existente en
+  lugar de duplicarla.
+
+Las lecturas de `localStorage` van envueltas en `try/catch`: un JSON corrupto o el modo privado
+del navegador no rompen la pantalla.
 
 El guardado definitivo en PostgreSQL corresponde al alta del pedido, que es la issue del formulario
 de solicitud; esa issue ya recibe las coordenadas con la forma que espera `POST /api/v1/pedidos`:
@@ -246,6 +270,8 @@ Ambas issues se comprobaron con Chrome headless sobre el backend local:
   layout móvil a 390 px sin desbordamiento horizontal y sin errores de consola).
 - Direcciones y guardado: 25/25 (búsqueda con Nominatim, elección por teclado, persistencia tras
   refresh, guardado, reutilización y borrado de direcciones, cierre del desplegable sin reaperturas).
+- Sección única y borrador: 25/25 (panel con una sola tarjeta, botón Guardar, persistencia del
+  borrador al salir y volver, aviso de cambios sin guardar, descarte, marcadores en cuadro).
 - Regresión sobre auth y mapa tras los cambios: 8/8.
 
 

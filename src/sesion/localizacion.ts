@@ -1,26 +1,20 @@
 import type { Punto } from '../componentes/mapa/geometria'
 
 /**
- * Persistencia local de la localisation del cliente.
+ * Direcciones que el cliente reutiliza entre envios ("Casa", "Oficina", "Deposito").
  *
- * No toca el microservicio: el alta del pedido (y con ella el guardado en
- * PostgreSQL) corresponde a la issue del formulario de solicitud. Aqui solo se
- * conserva en el navegador lo que el usuario ya eligio, para no perderlo al
- * recargar y para reutilizar sus direcciones habituales entre envios.
+ * Es distinto del borrador del pedido (`sesion/borrador.ts`): aqui viven
+ * direcciones reutilizables a largo plazo, no los datos de un pedido en curso.
+ * Ninguno de los dos toca el microservicio; el guardado definitivo en PostgreSQL
+ * corresponde al alta del pedido, que es la issue del formulario de solicitud.
  */
 
-const CLAVE_SELECCION = 'dronedesde.ubicacion.actual'
 const CLAVE_GUARDADOS = 'dronedesde.ubicacion.guardadas'
 
-/** Punto del mapa junto a la direccion legible que lo describes. */
+/** Punto del mapa junto a la direccion legible que lo describe. */
 export interface PuntoEtiquetado {
   punto: Punto
   direccion: string
-}
-
-export type Seleccion = {
-  origen: PuntoEtiquetado | null
-  destino: PuntoEtiquetado | null
 }
 
 export interface DireccionGuardada extends PuntoEtiquetado {
@@ -45,15 +39,6 @@ function escribir(clave: string, valor: unknown): void {
   } catch {
     // Modo privado o cuota llena: la app sigue funcionando sin persistencia.
   }
-}
-
-export function leerSeleccion(): Seleccion {
-  const datos = leer<Seleccion>(CLAVE_SELECCION, { origen: null, destino: null })
-  return { origen: datos.origen ?? null, destino: datos.destino ?? null }
-}
-
-export function guardarSeleccion(seleccion: Seleccion): void {
-  escribir(CLAVE_SELECCION, seleccion)
 }
 
 export function listarGuardadas(): DireccionGuardada[] {
@@ -93,8 +78,4 @@ export function eliminarDireccion(id: string): void {
     CLAVE_GUARDADOS,
     listarGuardadas().filter((item) => item.id !== id),
   )
-}
-
-export function limpiarSeleccion(): void {
-  localStorage.removeItem(CLAVE_SELECCION)
 }
