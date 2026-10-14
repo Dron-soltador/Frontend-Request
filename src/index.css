@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import 'leaflet/dist/leaflet.css';
 
 @theme {
   --color-marca-50: oklch(0.97 0.02 250);
@@ -43,6 +44,38 @@
 
   .campo-error {
     @apply border-red-400 focus:border-red-500 focus:ring-red-500/20;
+  }
+}
+
+@layer components {
+  /* Marcador con forma de "teardrop": se rota -45deg y la punta inferior
+     queda anclada a la coordenada exacta que entrega Leaflet. */
+  .marcador-punto__globo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50% 50% 50% 0;
+    border: 3px solid white;
+    box-shadow: 0 4px 10px rgb(15 23 42 / 0.35);
+    font-size: 15px;
+    font-weight: 700;
+    color: white;
+    transform: rotate(-45deg);
+  }
+
+  /* La letra va al revés para compensar la rotación de la punta. */
+  .marcador-punto__letra {
+    transform: rotate(45deg);
+  }
+
+  .marcador-punto__globo--a {
+    background: #059669;
+  }
+
+  .marcador-punto__globo--b {
+    background: #dc2626;
   }
 }
 

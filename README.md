@@ -121,6 +121,88 @@ repositorio, igual que el microservicio de Drones.
 
 **Construcción de la interfaz web responsiva para el acceso de clientes.**
 
+### Mapa interactivo de puntos de entrega
+
+| Criterio de aceptación | Implementación |
+| --- | --- |
+| Arrastrar o hacer clic sobre el mapa actualiza las coordenadas de origen y destino en tiempo real | `SelectorPuntos.tsx`: los marcadores son `draggable` y el `click` del mapa coloca el punto activo |
+| Carga correcta de las baldosas de OpenStreetMap sin retrasos visuales | `TileLayer` de OSM con overlay de carga que solo se muestra en la primera pintada, nunca al desplazar |
+
+El punto se puede fijar de tres maneras equivalentes: escribiendo una dirección, arrastrando el
+marcador o haciendo clic en el mapa.
+
+#### Sección única "Hacer un pedido"
+
+Ruta `/pedido`. La solicitud de envío vive en **una sola pantalla**, no fragmentada en módulos
+sueltos, y muestra el recorrido completo en pasos (1 Puntos de entrega, 2 Datos del paquete,
+3 Confirmar y enviar). Hoy solo el paso 1 está habilitado; los demás aparecen marcados para que
+se vea el camino que se completará en la issue del formulario.
+
+- **Guardar pedido**: persiste origen y destino en la sesión del navegador. Al salir de la sección
+  y volver, el borrador se recupera con sus marcadores. El botón se habilita solo con ambos puntos.
+- **Indicador de estado**: distingue *Pedido incompleto*, *Cambios sin guardar* y
+  *Pedido guardado en tu sesion*, con la hora relativa del guardado.
+- **Descartar**: borra el borrador y reinicia el formulario.
+- El guardado es una **acción explícita**: sin pulsar "Guardar pedido" nada se conserva, y la
+  interfaz lo dice. Se prefirió esto a un autoguardado invisible para que el cliente sepa qué está
+  persistido.
+- *Enviar pedido* aparece deshabilitado hasta que existan peso, categoría y fecha, que llegan con
+  la issue del formulario.
+
+Sobre el mapa:
+
+- Ruta `/pedido` (la antigua `/puntos` redirige allí), protegida por sesión y rol `cliente`.
+- Marcadores propios con `divIcon` (verde = origen A, rojo = destino B). Evita el fallo clásico de
+  las rutas de imágenes de Leaflet al empaquetar con Vite y da las etiquetas legibles.
+- La línea punteada une A y B y la distancia se calcula en vivo con la **misma fórmula de
+  Haversine y el mismo radio terrestre que `app/cotizador.py`**, para que lo que ve el cliente
+  antes de confirmar coincida con lo que calcula el backend.
+- La vista se reajusta al hacer clic y también cuando los puntos cambian sin tocar el mapa
+  (dirección elegida o borrador recuperado), para que el marcador nunca quede fuera de cuadro.
+- Las coordenadas salen redondeadas a 6 decimales y se validan con los mismos rangos que
+  `_validar_coordenadas` del backend (latitud ±90, longitud ±180).
+- Si OpenStreetMap no responde, se avisa en lugar de dejar un rectángulo gris y se sugiere
+  escribir las coordenadas a mano.
+- Atribución a OpenStreetMap visible, como exige su política de uso.
+
+#### Búsqueda de direcciones
+
+`BuscadorDireccion.tsx` + `servicios/geocodificacion.ts`. Usa **Nominatim**, el buscador oficial
+de OpenStreetMap, para no depender de una API de pago. Escribe el cliente, aparecen las
+coincidencias y al elegir una el marcador salta a esa ubicación.
+
+- Sugerencias navegables con flechas, `Enter` y `Esc`, anuncio por `listbox` para lectores de pantalla.
+- Debounce de 400 ms, mínimo 3 caracteres y `AbortController` para cancelar lo que el usuario ya dejó de escribir.
+- **Respeta la política de uso de Nominatim** (máximo 1 petición por segundo): intervalo mínimo
+  entre llamadas y caché en memoria con tope de 50 entradas.
+- Al elegir una dirección se **descarta la dirección anterior si el punto se mueve a mano**: la
+  etiqueta dejaría de describir la coordenada real y mandaría al dron al lugar equivocado.
+
+#### Guardado de la localización
+
+Dos mecanismos distintos, con responsabilidades separadas:
+
+- `sesion/borrador.ts` (`dronedesde.pedido.borrador`): el **pedido en curso**. Se escribe solo al
+  pulsar "Guardar pedido" y se recupera al volver a la sección. Si el cliente cierra la pestaña
+  sin enviar, el borrador se pierde a propósito: no dejamos pedidos a medias en la base de datos.
+- `sesion/localizacion.ts` (`dronedesde.ubicacion.guardadas`): las **direcciones reutilizables** a
+  largo plazo. El cliente las nombra ("Casa", "Oficina", "Depósito"), las recupera con un clic y
+  las elimina cuando quiere. Si guarda dos con el mismo nombre, se actualiza la existente en
+  lugar de duplicarla.
+
+Las lecturas de `localStorage` van envueltas en `try/catch`: un JSON corrupto o el modo privado
+del navegador no rompen la pantalla.
+
+El guardado definitivo en PostgreSQL corresponde al alta del pedido, que es la issue del formulario
+de solicitud; esa issue ya recibe las coordenadas con la forma que espera `POST /api/v1/pedidos`:
+`{origen: {latitud, longitud}, destino: {latitud, longitud}}`, y el campo `direccion` del modelo.
+
+Fuera de alcance según la issue: mapas 3D y capas satelitales de pago.
+
+### Autenticación
+
+**Construcción de la interfaz web responsiva para el acceso de clientes.**
+
 | Criterio de aceptación | Implementación |
 | --- | --- |
 | El usuario se registra correctamente y es redirigido al panel del cliente tras el login | `PaginaRegistro.tsx` encadena `POST /auth/register` + `POST /auth/login` y navega a `/panel` |
@@ -159,10 +241,11 @@ src/
 │   ├── token.ts              Decodificacion y expiracion del JWT
 │   └── SesionContext.tsx     Sesion persistida en localStorage
 ├── componentes/
+│   ├── mapa/                 SelectorPuntos (Leaflet + OSM), marcadores y geometria
 │   ├── avisos/               Toasts de exito / error / info
 │   ├── formularios/          Campo reutilizable y reglas de validacion
 │   └── ui/
-├── paginas/                  Login, Registro, Panel, Sin acceso, 404
+├── paginas/                  Login, Registro, Panel, Puntos, Sin acceso, 404
 └── rutas/Guardias.tsx        Rutas protegidas y publicas segun rol
 ```
 
@@ -180,6 +263,23 @@ src/
   inalcanzables desde este portal (requisito del Objetivo 3).
 - **Errores centralizados.** `ErrorApi` traduce cualquier fallo de red, timeout o respuesta
   no 2xx a un mensaje presentable, reutilizando el `message` que estandariza el backend.
+- **El mapa es un componente reutilizable.** `SelectorPuntos` no depende de la página que lo
+  hospeda: recibe `origen`, `destino`, `activo` y `onChange`, de modo que la issue del
+  formulario de solicitud solo tiene que embeberlo sin duplicar la lógica geográfica.
+
+## Verificación
+
+Ambas issues se comprobaron con Chrome headless sobre el backend local:
+
+- Autenticación: 12/12 (registro, login, 401 en toast, sesión persistente, rutas protegidas, logout).
+- Mapa: 18/18 (teselas OSM 15/15 en HTTP 200, clic y arrastre actualizando coordenadas en vivo,
+  marcadores A y B en ubicaciones distintas, payload con la forma del backend, rangos válidos,
+  layout móvil a 390 px sin desbordamiento horizontal y sin errores de consola).
+- Direcciones y guardado: 25/25 (búsqueda con Nominatim, elección por teclado, persistencia tras
+  refresh, guardado, reutilización y borrado de direcciones, cierre del desplegable sin reaperturas).
+- Sección única y borrador: 25/25 (panel con una sola tarjeta, botón Guardar, persistencia del
+  borrador al salir y volver, aviso de cambios sin guardar, descarte, marcadores en cuadro).
+- Regresión sobre auth y mapa tras los cambios: 8/8.
 
 
 

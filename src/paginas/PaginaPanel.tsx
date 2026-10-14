@@ -4,18 +4,20 @@ import { Marca } from './LayoutAutenticacion'
 import { useSesion } from '../sesion/SesionContext'
 
 /**
- * Cabecera del portal del cliente. La issue #1 solo habilita el acceso, asi que el
- * cuerpo es un marcador de posicion; los modulos de cotizacion, flota y calendario
- * se incorporan aqui en sus respectivas issues sin romper el layout.
+ * Cabecera del portal del cliente. El cuerpo es un marcador de posicion; los
+ * modulos de pedidos, flota y calendario se incorporan aqui en sus respectivas
+ * issues sin romper el layout.
  */
 export default function PaginaPanel() {
   const { email, cerrarSesion } = useSesion()
 
+  // La solicitud de envio vive en una sola seccion, no fragmentada en modulos.
   const modulos = [
     {
-      titulo: 'Cotizar y solicitar envio',
-      descripcion: 'Peso, categoria, urgencia y puntos A/B en el mapa.',
-      estado: 'Proximamente',
+      titulo: 'Hacer un pedido',
+      descripcion: 'Define el origen y el destino en el mapa y guarda el pedido en tu sesion.',
+      estado: 'Disponible',
+      enlace: '/pedido',
     },
     {
       titulo: 'Mis pedidos',
@@ -70,13 +72,42 @@ export default function PaginaPanel() {
           {modulos.map((modulo) => (
             <article
               key={modulo.titulo}
-              className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+              className={`rounded-xl border bg-white p-5 shadow-sm ${
+                'enlace' in modulo ? 'border-emerald-200' : 'border-slate-200'
+              }`}
             >
-              <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                {modulo.estado}
-              </span>
+              <div className="flex items-center justify-between gap-2">
+                <span
+                  className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+                    'enlace' in modulo
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  {modulo.estado}
+                </span>
+              </div>
               <h2 className="mt-3 font-semibold text-slate-900">{modulo.titulo}</h2>
               <p className="mt-1 text-sm text-slate-600">{modulo.descripcion}</p>
+
+              {'enlace' in modulo && (
+                <Link
+                  to={modulo.enlace}
+                  className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-marca-700 underline-offset-4 hover:underline"
+                >
+                  Abrir el mapa
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    strokeWidth={2}
+                    stroke="currentColor"
+                    className="size-4"
+                  >
+                    <path d="m9 6 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </Link>
+              )}
             </article>
           ))}
         </div>
