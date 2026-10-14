@@ -121,6 +121,9 @@ repositorio, igual que el microservicio de Drones.
 | Arrastrar o hacer clic sobre el mapa actualiza las coordenadas de origen y destino en tiempo real | `SelectorPuntos.tsx`: los marcadores son `draggable` y el `click` del mapa coloca el punto activo |
 | Carga correcta de las baldosas de OpenStreetMap sin retrasos visuales | `TileLayer` de OSM con overlay de carga que solo se muestra en la primera pintada, nunca al desplazar |
 
+El punto se puede fijar de tres maneras equivalentes: escribiendo una dirección, arrastrando el
+marcador o haciendo clic en el mapa.
+
 Sobre el mapa:
 
 - Ruta `/puntos`, protegida por sesión y rol `cliente`. Se llega desde el panel del cliente.
@@ -135,11 +138,35 @@ Sobre el mapa:
   escribir las coordenadas a mano.
 - Atribución a OpenStreetMap visible, como exige su política de uso.
 
-Fuera de alcance según la issue: mapas 3D y capas satelitales de pago.
+#### Búsqueda de direcciones
 
-El formulario completo de solicitud (peso, categoría, urgencia y cotización) llega en su issue;
-esta pantalla ya produce el payload con la forma que espera `POST /api/v1/pedidos`:
-`{origen: {latitud, longitud}, destino: {latitud, longitud}}`.
+`BuscadorDireccion.tsx` + `servicios/geocodificacion.ts`. Usa **Nominatim**, el buscador oficial
+de OpenStreetMap, para no depender de una API de pago. Escribe el cliente, aparecen las
+coincidencias y al elegir una el marcador salta a esa ubicación.
+
+- Sugerencias navegables con flechas, `Enter` y `Esc`, anuncio por `listbox` para lectores de pantalla.
+- Debounce de 400 ms, mínimo 3 caracteres y `AbortController` para cancelar lo que el usuario ya dejó de escribir.
+- **Respeta la política de uso de Nominatim** (máximo 1 petición por segundo): intervalo mínimo
+  entre llamadas y caché en memoria con tope de 50 entradas.
+- Al elegir una dirección se **descarta la dirección anterior si el punto se mueve a mano**: la
+  etiqueta dejaría de describir la coordenada real y mandaría al dron al lugar equivocado.
+
+#### Guardado de la localización
+
+`sesion/localizacion.ts`. Todo queda en el navegador, bajo las claves `dronedesde.ubicacion.*`:
+
+- La selección actual (origen, destino y sus direcciones) se persiste sola: un F5 no borra el trabajo.
+- **Mis direcciones guardadas**: el cliente nombra sus direcciones ("Casa", "Oficina", "Depósito"),
+  las recupera con un clic y las elimina cuando quiere. Si guarda dos con el mismo nombre, se
+  actualiza la existente en lugar de duplicarla.
+- Las lecturas de `localStorage` van envueltas en `try/catch`: un JSON corrupto o el modo privado
+  del navegador no rompen la pantalla.
+
+El guardado definitivo en PostgreSQL corresponde al alta del pedido, que es la issue del formulario
+de solicitud; esa issue ya recibe las coordenadas con la forma que espera `POST /api/v1/pedidos`:
+`{origen: {latitud, longitud}, destino: {latitud, longitud}}`, y el campo `direccion` del modelo.
+
+Fuera de alcance según la issue: mapas 3D y capas satelitales de pago.
 
 ### Autenticación
 
@@ -217,6 +244,9 @@ Ambas issues se comprobaron con Chrome headless sobre el backend local:
 - Mapa: 18/18 (teselas OSM 15/15 en HTTP 200, clic y arrastre actualizando coordenadas en vivo,
   marcadores A y B en ubicaciones distintas, payload con la forma del backend, rangos válidos,
   layout móvil a 390 px sin desbordamiento horizontal y sin errores de consola).
+- Direcciones y guardado: 25/25 (búsqueda con Nominatim, elección por teclado, persistencia tras
+  refresh, guardado, reutilización y borrado de direcciones, cierre del desplegable sin reaperturas).
+- Regresión sobre auth y mapa tras los cambios: 8/8.
 
 
 

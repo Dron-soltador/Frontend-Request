@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents } from 'react-leaflet'
+import { MapContainer, Marker, Polyline, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import type { Map as LeafletMap } from 'leaflet'
 
@@ -20,6 +20,9 @@ export interface SelectorPuntosProps {
   /** Punto que se coloca al hacer clic en el mapa. */
   activo: PuntoActivo
   onActivoChange: (activo: PuntoActivo) => void
+  /** Direccion legible de cada punto, mostrada al pasar el cursor sobre el marcador. */
+  direccionOrigen?: string
+  direccionDestino?: string
   className?: string
 }
 
@@ -83,6 +86,8 @@ export function SelectorPuntos({
   onChange,
   activo,
   onActivoChange,
+  direccionOrigen,
+  direccionDestino,
   className = 'h-[26rem] sm:h-[32rem]',
 }: SelectorPuntosProps) {
   const [cargandoInicial, setCargandoInicial] = useState(true)
@@ -181,7 +186,13 @@ export function SelectorPuntos({
             draggable
             eventHandlers={{ dragend: manejarArrastre('origen') }}
             alt="Punto A (origen)"
-          />
+          >
+            {direccionOrigen && (
+              <Tooltip direction="top" offset={[0, -32]}>
+                <span className="line-clamp-2 max-w-56">{direccionOrigen}</span>
+              </Tooltip>
+            )}
+          </Marker>
         )}
 
         {esPuntoValido(destino) && (
@@ -191,7 +202,13 @@ export function SelectorPuntos({
             draggable
             eventHandlers={{ dragend: manejarArrastre('destino') }}
             alt="Punto B (destino)"
-          />
+          >
+            {direccionDestino && (
+              <Tooltip direction="top" offset={[0, -32]}>
+                <span className="line-clamp-2 max-w-56">{direccionDestino}</span>
+              </Tooltip>
+            )}
+          </Marker>
         )}
 
         {esPuntoValido(origen) && esPuntoValido(destino) && (
