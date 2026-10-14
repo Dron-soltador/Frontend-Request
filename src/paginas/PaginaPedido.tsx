@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { BuscadorDireccion } from '../componentes/mapa/BuscadorDireccion'
 import { SelectorPuntos } from '../componentes/mapa/SelectorPuntos'
@@ -6,6 +6,14 @@ import type { PuntoActivo } from '../componentes/mapa/SelectorPuntos'
 import { formatearCoordenada } from '../componentes/mapa/geometria'
 import type { Punto } from '../componentes/mapa/geometria'
 import { useAvisos } from '../componentes/avisos/ProveedorAvisos'
+import { PanelCotizacion } from '../componentes/paquete/PanelCotizacion'
+import { FormularioPaquete } from '../componentes/paquete/FormularioPaquete'
+import type { DatosPaquete } from '../componentes/paquete/FormularioPaquete'
+import { esFragil } from '../componentes/paquete/FormularioPaquete'
+import { claveCotizacion, useCotizacion } from '../componentes/paquete/useCotizacion'
+import { crearPedido } from '../servicios/pedidos'
+import type { DatosCotizacion, PedidoRegistrado } from '../servicios/pedidos'
+import { ErrorApi } from '../servicios/clienteHttp'
 import {
   guardarBorrador,
   hayCambiosSinGuardar,
@@ -20,17 +28,27 @@ import {
   listarGuardadas,
 } from '../sesion/localizacion'
 import type { DireccionGuardada, PuntoEtiquetado } from '../sesion/localizacion'
+import { useSesion } from '../sesion/SesionContext'
+
+const PAQUETE_VACIO: DatosPaquete = {
+  peso_kg: 0,
+  fecha_programada: '',
+  categoria: 'Estandar',
+  es_urgente: false,
+  descripcion: '',
+}
 
 /**
  * Seccion unica de solicitud. Reune en una sola pantalla todo el flujo del
  * pedido, sin fragmentarlo en modulos sueltos.
  *
- * Hoy solo esta habilitado el paso 1 (puntos de entrega). Los pasos 2 y 3
- * aparecen marcados como pendientes para que se vea el recorrido completo, que
- * es lo que se defendera en la exposicion.
+ * Paso 1: puntos de entrega en el mapa. Paso 2: datos del paquete con cotizacion
+ * en vivo contra `POST /api/v1/pedidos/cotizar`. Paso 3: envio con
+ * `POST /api/v1/pedidos`, que ademas notifica al despachador del administrador.
  */
 export default function PaginaPedido() {
   const { exito, info, error } = useAvisos()
+  const { email } = useSesion()
 
   const [origen, setOrigen] = useState<PuntoEtiquetado | null>(null)
   const [destino, setDestino] = useState<PuntoEtiquetado | null>(null)
@@ -38,6 +56,16 @@ export default function PaginaPedido() {
   const [borrador, setBorrador] = useState<BorradorPedido | null>(null)
   const [guardadas, setGuardadas] = useState<DireccionGuardada[]>([])
   const [nombre, setNombre] = useState('')
+  const [paquete, setPaquete] = useState<DatosPaquete>(PAQUETE_VACIO)
+  const [erroresPaquete, setErroresPaquete] = useState<
+    Partial<Record<keyof DatosPaquete, string>>
+  >({})
+  const [enviando, setEnviando] = useState(false)
+  const [ultimoPedido, setUltimoPedido] = useState<{
+    id: number
+    costo: number | null
+    notificado: boolean
+  } | null>(null)
   // Sube cada vez que los puntos cambian sin pasar por un clic, para que el mapa
   // se desplace a la nueva ubicacion.
   const [revisionEncuadre, setRevisionEncuadre] = useState(0)
@@ -108,21 +136,154 @@ export default function PaginaPedido() {
 
   const sinGuardar = hayCambiosSinGuardar(borrador, origen, destino)
 
+  /**
+   * Datos que se envian a `POST /api/v1/pedidos/cotizar`. Se anula mientras falte
+   * el peso o los puntos, para no pedir una tarifa que el backend va a rechazar.
+   */
+  const datosCotizacion = useMemo<DatosCotizacion | null>(() => {
+    if (!origen || !destino || paquete.peso_kg <= 0) return null
+    return {
+      peso_kg: paquete.peso_kg,
+      origen: origen.punto,
+      destino: destino.punto,
+      es_fragil: esFragil(paquete.categoria),
+      es_urgente: paquete.es_urgente,
+    }
+  }, [origen, destino, paquete.peso_kg, paquete.categoria, paquete.es_urgente])
+
+  const cotizacion = useCotizacion(claveCotizacion(datosCotizacion), datosCotizacion)
+
+  const cambiarPaquete = useCallback(
+    <K extends keyof DatosPaquete>(campo: K, valor: DatosPaquete[K]) => {
+      setPaquete((previo) => ({ ...previo, [campo]: valor }))
+      setErroresPaquete((previos) => ({ ...previos, [campo]: undefined }))
+    },
+    [],
+  )
+
+  function validarPaquete(): boolean {
+    const errores: Partial<Record<keyof DatosPaquete, string>> = {}
+
+    if (!(paquete.peso_kg > 0)) {
+      errores.peso_kg = 'Ingresa el peso del paquete.'
+    } else if (paquete.peso_kg > 50) {
+      errores.peso_kg = 'El peso maximo por paquete es 50 kg.'
+    }
+
+    if (!paquete.fecha_programada) {
+      errores.fecha_programada = 'Elige la fecha de entrega.'
+    }
+
+    setErroresPaquete(errores)
+    return Object.keys(errores).length === 0
+  }
+
+  async function enviar() {
+    if (!origen || !destino) {
+      error('Define el origen y el destino antes de solicitar el envio.')
+      return
+    }
+    if (!validarPaquete()) {
+      error('Revisa los campos marcados antes de solicitar el envio.')
+      return
+    }
+    if (cotizacion.estado !== 'lista') {
+      error('Espera a que termine la cotizacion antes de enviar.')
+      return
+    }
+
+    setEnviando(true)
+    try {
+      const respuesta = await crearPedido({
+        peso_kg: paquete.peso_kg,
+        origen: origen.punto,
+        destino: destino.punto,
+        es_fragil: esFragil(paquete.categoria),
+        es_urgente: paquete.es_urgente,
+        // El backend exige `cliente` y `direccion`. El cliente es la cuenta
+        // autenticada y la direccion, el destino elegido en el mapa.
+        cliente: email ?? 'Cliente',
+        direccion: destino.direccion || 'Punto definido en el mapa',
+        categoria: paquete.categoria,
+        fecha_programada: paquete.fecha_programada,
+        descripcion: paquete.descripcion,
+        costo_total: cotizacion.estado === 'lista' ? cotizacion.cotizacion.costo_total : 0,
+      })
+
+      setUltimoPedido({
+        id: respuesta.pedido.id,
+        costo: respuesta.pedido.costo_total,
+        notificado: true,
+      })
+      exito(`Pedido #${respuesta.pedido.id} registrado. Estado: ${respuesta.pedido.estado}.`)
+      limpiarFormulario()
+    } catch (excepcion) {
+      /**
+       * 502 no es un fallo del cliente: el backend confirma que guardo el
+       * pedido y solo no logro avisar al despachador del administrador. Tratarlo
+       * como error dejaria al cliente creyendo que no se registro nada cuando si
+       * esta en la base de datos, y duplicaria el pedido al reintentar.
+       */
+      const parcial = excepcion instanceof ErrorApi ? leerPedidoParcial(excepcion) : null
+
+      if (parcial) {
+        setUltimoPedido({
+          id: parcial.id,
+          costo: parcial.costo_total,
+          notificado: false,
+        })
+        info(
+          `Pedido #${parcial.id} registrado, pero el despachador no respondio a tiempo. Queda pendiente de asignacion.`,
+        )
+        limpiarFormulario()
+        return
+      }
+
+      error(
+        excepcion instanceof ErrorApi
+          ? excepcion.message
+          : 'No se pudo registrar el pedido. Intenta de nuevo.',
+      )
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  /** Limpia el formulario tras un envio exitoso, como pide el criterio de aceptacion. */
+  function limpiarFormulario() {
+    setOrigen(null)
+    setDestino(null)
+    setActivo('origen')
+    setPaquete(PAQUETE_VACIO)
+    setErroresPaquete({})
+    setBorrador(null)
+    limpiarBorrador()
+    reencuadrar()
+  }
+
+  const puedeEnviar =
+    Boolean(origen && destino) &&
+    paquete.peso_kg > 0 &&
+    paquete.fecha_programada !== '' &&
+    cotizacion.estado === 'lista' &&
+    !enviando
+
   return (
     <div className="flex min-h-dvh flex-col bg-slate-100">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-6xl px-5 py-5 sm:px-8">
           <h1 className="text-xl font-bold tracking-tight text-slate-900">Hacer un pedido</h1>
           <p className="mt-0.5 text-sm text-slate-600">
-            Completa la solicitud de envio. Por ahora solo se piden los puntos de entrega.
+            Define los puntos de entrega, cargua los datos del paquete y mira la tarifa antes de
+            confirmar.
           </p>
 
           <ol className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
             <Paso numero={1} titulo="Puntos de entrega" estado="activo" />
             <Separador />
-            <Paso numero={2} titulo="Datos del paquete" estado="pendiente" />
+            <Paso numero={2} titulo="Datos del paquete" estado="activo" />
             <Separador />
-            <Paso numero={3} titulo="Confirmar y enviar" estado="pendiente" />
+            <Paso numero={3} titulo="Confirmar y enviar" estado={puedeEnviar ? 'activo' : 'pendiente'} />
           </ol>
         </div>
       </header>
@@ -135,6 +296,14 @@ export default function PaginaPedido() {
           onGuardar={guardar}
           onDescartar={descartar}
         />
+
+        {ultimoPedido && (
+          <ConfirmacionPedido
+            id={ultimoPedido.id}
+            costo={ultimoPedido.costo}
+            notificado={ultimoPedido.notificado}
+          />
+        )}
 
         <SelectorPuntos
           origen={origen?.punto ?? null}
@@ -184,6 +353,25 @@ export default function PaginaPedido() {
           />
         </div>
 
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-base font-semibold text-slate-900">Datos del paquete</h2>
+          <p className="mt-0.5 text-sm text-slate-600">
+            Al cambiar el peso, la categoria o la urgencia se recalcula la tarifa.
+          </p>
+
+          <div className="mt-5 grid gap-6 lg:grid-cols-2">
+            <FormularioPaquete
+              datos={paquete}
+              onChange={cambiarPaquete}
+              errores={erroresPaquete}
+              deshabilitado={enviando}
+              onEnviar={enviar}
+              puedeEnviar={puedeEnviar}
+            />
+            <PanelCotizacion estado={cotizacion} />
+          </div>
+        </section>
+
         <ListaDirecciones
           guardadas={guardadas}
           nombre={nombre}
@@ -203,7 +391,6 @@ export default function PaginaPedido() {
           }}
         />
 
-        <EnviarPedido listo={Boolean(origen && destino)} />
       </main>
     </div>
   )
@@ -401,27 +588,95 @@ function TarjetaPunto({
   )
 }
 
-function EnviarPedido({ listo }: { listo: boolean }) {
+/**
+ * Confirmacion visible tras un envio exitoso. El criterio de aceptacion pide
+ * limpiar el formulario y mostrar un mensaje: el formulario ya se limpio y este
+ * bloque es el mensaje persistente (el toast se va solo a los 5 segundos).
+ *
+ * Distingue si el despachador recibio la notificacion, porque el backend puede
+ * guardar el pedido y aun asi no logro avisar al administrador.
+ */
+function ConfirmacionPedido({
+  id,
+  costo,
+  notificado,
+}: {
+  id: number
+  costo: number | null
+  notificado: boolean
+}) {
   return (
-    <section className="rounded-xl border border-dashed border-slate-300 bg-white p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <section
+      className={`rounded-xl border p-5 ${
+        notificado ? 'border-emerald-300 bg-emerald-50' : 'border-amber-300 bg-amber-50'
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <span
+          className={`flex size-9 shrink-0 items-center justify-center rounded-full text-white ${
+            notificado ? 'bg-emerald-600' : 'bg-amber-600'
+          }`}
+        >
+          {notificado ? (
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              strokeWidth={2.2}
+              stroke="currentColor"
+              className="size-5"
+            >
+              <path d="m4.5 12.75 6 6 9-13.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          ) : (
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              strokeWidth={2}
+              stroke="currentColor"
+              className="size-5"
+            >
+              <path
+                d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
+        </span>
+
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">Enviar pedido</h2>
-          <p className="mt-1 text-xs text-slate-600">
-            Se habilita cuando esten completos el peso, la categoria y la fecha de entrega. Esos
-            campos llegan con la issue del formulario de solicitud.
+          <h2
+            className={`text-sm font-semibold ${
+              notificado ? 'text-emerald-900' : 'text-amber-900'
+            }`}
+          >
+            Pedido #{id} registrado correctamente
+          </h2>
+          <p className={`mt-1 text-sm ${notificado ? 'text-emerald-800' : 'text-amber-800'}`}>
+            {notificado
+              ? 'El despachador recibio la solicitud y buscara un dron disponible. Tu pedido quedo en estado PENDIENTE.'
+              : 'Tu pedido quedo en estado PENDIENTE, pero el despachador no respondio a tiempo. Quedara pendiente de asignacion hasta que se le avise.'}
+            {costo != null && ` Costo registrado: $${costo.toLocaleString('es-AR')}.`}
+          </p>
+          <p className={`mt-1 text-xs ${notificado ? 'text-emerald-700' : 'text-amber-700'}`}>
+            El formulario se limpio para que puedas cargar un nuevo envio.
           </p>
         </div>
-        <button
-          type="button"
-          disabled
-          className="shrink-0 rounded-lg bg-slate-300 px-4 py-2 text-sm font-semibold text-white"
-        >
-          {listo ? 'Completa los datos del paquete' : 'Incompleto'}
-        </button>
       </div>
     </section>
   )
+}
+
+/**
+ * Extrae el pedido de un 502. El backend lo incluye en el cuerpo porque el
+ * commit ya se hizo: lo que fallo fue unicamente la notificacion al despachador.
+ */
+function leerPedidoParcial(excepcion: ErrorApi): PedidoRegistrado | null {
+  if (excepcion.estado !== 502) return null
+  const cuerpo = excepcion.datos as { pedido?: PedidoRegistrado } | null
+  return cuerpo?.pedido && typeof cuerpo.pedido.id === 'number' ? cuerpo.pedido : null
 }
 
 function ListaDirecciones({

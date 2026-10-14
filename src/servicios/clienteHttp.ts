@@ -17,11 +17,18 @@ const CLAVE_TOKEN = 'dronedesde.sesion'
 
 export class ErrorApi extends Error {
   readonly estado: number
+  /**
+   * Cuerpo JSON de la respuesta fallida. Hace falta porque el backend usa el
+   * 502 para un exito parcial: guarda el pedido pero no logra avisar al
+   * despachador, y ese detalle solo viaja en el cuerpo.
+   */
+  readonly datos: unknown
 
-  constructor(mensaje: string, estado: number) {
+  constructor(mensaje: string, estado: number, datos: unknown = null) {
     super(mensaje)
     this.name = 'ErrorApi'
     this.estado = estado
+    this.datos = datos
   }
 
   /** 400: el backend rechazo los datos enviados por el formulario. */
@@ -123,7 +130,7 @@ export async function peticion<T>(ruta: string, opciones: OpcionesPeticion = {})
 
   if (!respuesta.ok) {
     const predeterminado = `El servidor respondio con codigo ${respuesta.status}. Intenta de nuevo.`
-    throw new ErrorApi(extraerMensaje(datos, predeterminado), respuesta.status)
+    throw new ErrorApi(extraerMensaje(datos, predeterminado), respuesta.status, datos)
   }
 
   return datos as T

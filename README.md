@@ -199,6 +199,38 @@ de solicitud; esa issue ya recibe las coordenadas con la forma que espera `POST 
 
 Fuera de alcance según la issue: mapas 3D y capas satelitales de pago.
 
+#### Datos del paquete y cotización en vivo
+
+`componentes/paquete/`. Campos de peso, fecha de entrega, categoría (Estándar/Frágil), urgencia
+y descripción, más el botón **Solicitar Envío**.
+
+**Cotización instantánea** contra `POST /api/v1/pedidos/cotizar`. Cada cambio en el mapa o en
+los campos del paquete recalcula la tarifa en pantalla, con el desglose que devuelve el backend
+(tarifa base, peso, distancia y recargos) para que el cliente vea de dónde sale el precio.
+
+- `useCotizacion.ts` antirrebota 400 ms, cancela la petición anterior con `AbortController` y
+  descarta respuestas obsoletas: al escribir rápido no quedan peticiones apiladas ni un precio
+  viejo pegado en pantalla, lo que además respeta el objetivo de responder en menos de 1500 ms.
+- El efecto depende de una **clave serializada** de los datos, no del objeto, que es nuevo en cada
+  render y provocaría un bucle de peticiones.
+- `categoria` es la única fuente de verdad de la fragilidad: `es_fragil` se deriva con
+  `esFragil()`. Antes eran dos estados independientes y se desincronizaban, cobrando el recargo
+  con el radio "Estándar" marcado.
+
+**Alta del pedido** con `POST /api/v1/pedidos`, que además notifica al despachador del
+administrador. Tras el envío se limpia el formulario y se muestra la confirmación.
+
+- El backend devuelve **502 cuando el pedido se guardó pero el despachador no respondió**. Se
+  trata como éxito parcial: se muestra la confirmación indicando que el pedido quedó PENDIENTE
+  pero sin asignar. Tratarlo como error haría creer al cliente que no se registró nada cuando sí
+  está en la base de datos, y duplicaría el pedido al reintentar.
+
+> **Nota sobre el contrato:** el enunciado menciona `POST /pedidos/cotizar`, pero las rutas reales
+> cuelgan de `/api/v1/pedidos`. El endpoint de cotización no existía y se agregó al microservicio
+> reutilizando `calcular_cotizacion` de `app/cotizador.py`, para no duplicar la regla de negocio.
+
+Fuera de alcance según la issue: pasarela de cobro bancaria real.
+
 ### Autenticación
 
 **Construcción de la interfaz web responsiva para el acceso de clientes.**
@@ -279,6 +311,9 @@ Ambas issues se comprobaron con Chrome headless sobre el backend local:
   refresh, guardado, reutilización y borrado de direcciones, cierre del desplegable sin reaperturas).
 - Sección única y borrador: 25/25 (panel con una sola tarjeta, botón Guardar, persistencia del
   borrador al salir y volver, aviso de cambios sin guardar, descarte, marcadores en cuadro).
+- Datos del paquete y envío: 30/30 (cotización disparada por peso y por mapa, recargos de
+  fragilidad y urgencia, validación, alta del pedido, limpieza del formulario, confirmación
+  coherente con la respuesta real y pedido persistido en el backend).
 - Regresión sobre auth y mapa tras los cambios: 8/8.
 
 
