@@ -48,7 +48,7 @@ const PAQUETE_VACIO: DatosPaquete = {
  */
 export default function PaginaPedido() {
   const { exito, info, error } = useAvisos()
-  const { email } = useSesion()
+  const { email, sesion } = useSesion()
 
   const [origen, setOrigen] = useState<PuntoEtiquetado | null>(null)
   const [destino, setDestino] = useState<PuntoEtiquetado | null>(null)
@@ -202,6 +202,8 @@ export default function PaginaPedido() {
         es_urgente: paquete.es_urgente,
         // El backend exige `cliente` y `direccion`. El cliente es la cuenta
         // autenticada y la direccion, el destino elegido en el mapa.
+        // Sin usuario_id el pedido no aparece luego en "Mis pedidos".
+        usuario_id: sesion?.claims.usuario_id || undefined,
         cliente: email ?? 'Cliente',
         direccion: destino.direccion || 'Punto definido en el mapa',
         categoria: paquete.categoria,

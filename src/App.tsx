@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 
 import { Avisos } from './componentes/avisos/Avisos'
+import PaginaMisPedidos from './paginas/PaginaMisPedidos'
 import PaginaLogin from './paginas/PaginaLogin'
 import PaginaNoEncontrada from './paginas/PaginaNoEncontrada'
 import PaginaPanel from './paginas/PaginaPanel'
@@ -49,6 +50,15 @@ export default function App() {
             element={
               <RutaProtegida>
                 <PaginaPedido />
+              </RutaProtegida>
+            }
+          />
+
+          <Route
+            path="/mis-pedidos"
+            element={
+              <RutaProtegida>
+                <PaginaMisPedidos />
               </RutaProtegida>
             }
           />
