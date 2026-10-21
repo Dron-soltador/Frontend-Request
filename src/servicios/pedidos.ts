@@ -7,6 +7,8 @@ import { peticion } from './clienteHttp'
  *   `/pedidos` como aparece en algunos enunciados.
  * - La cotización es un calculo sin persistencia: `POST /api/v1/pedidos/cotizar`.
  * - El alta del pedido es `POST /api/v1/pedidos`.
+ * - El historial es `GET /api/v1/pedidos/usuario/:usuario_id` y responde un ARRAY
+ *   plano (sin envoltorio), ya ordenado por `fecha_creacion` descendente.
  */
 
 export interface Punto {
@@ -51,8 +53,9 @@ export interface DatosPedido extends DatosCotizacion {
   descripcion: string
   costo_total: number
   /**
-   * Opcional: el backend lo acepta, pero el JWT no expone de forma confiable el
-   * id numerico y no existe un /auth/me que lo devuelva.
+   * Id del dueño del pedido, tomado del claim `usuario_id` del JWT. El backend solo
+   * lo persiste si llega en el body: sin el, el pedido queda con usuario_id NULL y
+   * nunca aparece en `GET /pedidos/usuario/:id`.
    */
   usuario_id?: number
 }
@@ -87,4 +90,41 @@ export function crearPedido(datos: DatosPedido): Promise<RespuestaPedido> {
     method: 'POST',
     body: datos,
   })
+}
+
+/** Estados que maneja el backend (`ESTADOS_VALIDOS` en `app/pedidos.py`). */
+export type EstadoPedido = 'PENDIENTE' | 'EN_CAMINO' | 'ENTREGADO' | 'RECHAZADO'
+
+/** Fila completa tal como la serializa `Pedido.to_dict()` en el backend. */
+export interface Pedido {
+  id: number
+  usuario_id: number | null
+  cliente: string | null
+  direccion: string | null
+  lat_origen: number
+  lon_origen: number
+  lat_destino: number
+  lon_destino: number
+  peso_kg: number
+  categoria: string | null
+  es_fragil: boolean
+  es_urgente: boolean
+  costo_total: number | null
+  /** Formato YYYY-MM-DD (viene del input date del formulario). */
+  fecha_programada: string | null
+  /** string por si el backend suma estados nuevos sin avisar al frontend. */
+  estado: EstadoPedido | string
+  /** ISO 8601 en UTC, pero SIN zona horaria (el backend usa utcnow()). */
+  fecha_creacion: string | null
+}
+
+/** Historial del cliente autenticado. */
+export async function obtenerPedidosUsuario(usuarioId: number): Promise<Pedido[]> {
+  const datos = await peticion<unknown>(`/api/v1/pedidos/usuario/${usuarioId}`)
+
+  if (Array.isArray(datos)) return datos as Pedido[]
+
+  // Defensa ante un futuro envoltorio { pedidos: [...] }.
+  const envuelto = (datos as { pedidos?: unknown } | null)?.pedidos
+  return Array.isArray(envuelto) ? (envuelto as Pedido[]) : []
 }

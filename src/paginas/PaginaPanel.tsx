@@ -18,16 +18,21 @@ export default function PaginaPanel() {
       descripcion: 'Define el origen y el destino en el mapa y guarda el pedido en tu sesion.',
       estado: 'Disponible',
       enlace: '/pedido',
+      accion: 'Abrir el mapa',
     },
     {
       titulo: 'Mis pedidos',
       descripcion: 'Seguimiento del estado de cada entrega en curso.',
-      estado: 'Proximamente',
+      estado: 'Disponible',
+      enlace: '/mis-pedidos',
+      accion: 'Ver mis pedidos',
     },
     {
       titulo: 'Calendario de entregas',
       descripcion: 'Agenda de los envios programados por fecha.',
-      estado: 'Proximamente',
+      estado: 'Disponible',
+      enlace: '/mis-pedidos',
+      accion: 'Abrir el calendario',
     },
   ] as const
 
@@ -95,7 +100,7 @@ export default function PaginaPanel() {
                   to={modulo.enlace}
                   className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-marca-700 underline-offset-4 hover:underline"
                 >
-                  Abrir el mapa
+                  {modulo.accion}
                   <svg
                     aria-hidden="true"
                     viewBox="0 0 24 24"
