@@ -39,6 +39,91 @@ interface FormularioPaqueteProps {
  * Datos del paquete. Es el paso 2 del pedido: lo que el dron va a transportar.
  * Cada cambio en peso, categoria o urgencia dispara la cotizacion en vivo.
  */
+
+/* Componentes internos */
+
+function Categorias({
+  categoria,
+  onChange,
+  deshabilitado,
+}: {
+  categoria: string
+  onChange: (valor: string) => void
+  deshabilitado: boolean
+}) {
+  return (
+    <fieldset>
+      <legend className="campo-label">Categoria del paquete</legend>
+      <div className="mt-1 grid gap-2.5 sm:grid-cols-2">
+        {CATEGORIAS.map((cat) => {
+          const activa = categoria === cat.valor
+          return (
+            <label
+              key={cat.valor}
+              className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 transition ${
+                activa ? 'border-marca-600 bg-marca-50 ring-1 ring-marca-600/30' : 'border-slate-300 bg-white hover:bg-slate-50'
+              }`}
+            >
+              <input
+                type="radio"
+                name="categoria"
+                value={cat.valor}
+                checked={activa}
+                onChange={() => onChange(cat.valor)}
+                disabled={deshabilitado}
+                className="mt-0.5 size-4 border-slate-300 text-marca-600 focus:ring-marca-600/30"
+              />
+              <span>
+                <span className="block text-sm font-medium text-slate-900">
+                  {cat.etiqueta}
+                </span>
+                <span className="block text-xs text-slate-500">{cat.descripcion}</span>
+              </span>
+            </label>
+          )
+        })}
+      </div>
+      {errores.categoria && (
+        <p className="mt-1.5 text-xs font-medium text-red-600">{errores.categoria}</p>
+      )}
+    </fieldset>
+  )
+})
+
+function ToggleUrgencia({
+  esUrgente,
+  onChange,
+  deshabilitado,
+}: {
+  esUrgente: boolean
+  onChange: (valor: boolean) => void
+  deshabilitado: boolean
+}) {
+  return (
+    <label
+      className={`flex items-start gap-3 rounded-lg border p-3.5 transition ${
+        esUrgente ? 'border-amber-400 bg-amber-50' : 'border-slate-300 bg-white hover:bg-slate-50'
+      }`}
+    >
+      <input
+        type="checkbox"
+        checked={esUrgente}
+        onChange={(evento) => onChange(evento.target.checked)}
+        disabled={deshabilitado}
+        className="mt-0.5 size-4 rounded border-slate-300 text-amber-600 focus:ring-amber-600/30"
+      />
+      <span>
+        <span className="block text-sm font-medium text-slate-900">Envio urgente</span>
+        <span className="block text-xs text-slate-500">
+          Prioridad sobre los demas pedidos. Aplica un recargo del 25%.
+        </span>
+      </span>
+    </label>
+  )
+})
+
+/* Fin componentes internos */
+
 export function FormularioPaquete({
   datos,
   onChange,
@@ -88,65 +173,17 @@ export function FormularioPaquete({
         />
       </div>
 
-      <fieldset>
-        <legend className="campo-label">Categoria del paquete</legend>
-        <div className="mt-1 grid gap-2.5 sm:grid-cols-2">
-          {CATEGORIAS.map((categoria) => {
-            const activa = datos.categoria === categoria.valor
-            return (
-              <label
-                key={categoria.valor}
-                className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 transition ${
-                  activa
-                    ? 'border-marca-600 bg-marca-50 ring-1 ring-marca-600/30'
-                    : 'border-slate-300 bg-white hover:bg-slate-50'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="categoria"
-                  value={categoria.valor}
-                  checked={activa}
-                  onChange={() => onChange('categoria', categoria.valor)}
-                  disabled={deshabilitado}
-                  className="mt-0.5 size-4 border-slate-300 text-marca-600 focus:ring-marca-600/30"
-                />
-                <span>
-                  <span className="block text-sm font-medium text-slate-900">
-                    {categoria.etiqueta}
-                  </span>
-                  <span className="block text-xs text-slate-500">{categoria.descripcion}</span>
-                </span>
-              </label>
-            )
-          })}
-        </div>
-        {errores.categoria && (
-          <p className="mt-1.5 text-xs font-medium text-red-600">{errores.categoria}</p>
-        )}
-      </fieldset>
+      <Categorias
+        categoria={datos.categoria}
+        onChange={(valor) => onChange('categoria', valor)}
+        deshabilitado={deshabilitado}
+      />
 
-      <label
-        className={`flex items-start gap-3 rounded-lg border p-3.5 transition ${
-          datos.es_urgente
-            ? 'border-amber-400 bg-amber-50'
-            : 'border-slate-300 bg-white hover:bg-slate-50'
-        }`}
-      >
-        <input
-          type="checkbox"
-          checked={datos.es_urgente}
-          onChange={(evento) => onChange('es_urgente', evento.target.checked)}
-          disabled={deshabilitado}
-          className="mt-0.5 size-4 rounded border-slate-300 text-amber-600 focus:ring-amber-600/30"
-        />
-        <span>
-          <span className="block text-sm font-medium text-slate-900">Envio urgente</span>
-          <span className="block text-xs text-slate-500">
-            Prioridad sobre los demas pedidos. Aplica un recargo del 25%.
-          </span>
-        </span>
-      </label>
+      <ToggleUrgencia
+        esUrgente={datos.es_urgente}
+        onChange={(valor) => onChange('es_urgente', valor)}
+        deshabilitado={deshabilitado}
+      />
 
       <Campo
         etiqueta="Descripcion del paquete"

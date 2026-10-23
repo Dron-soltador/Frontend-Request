@@ -13,7 +13,7 @@ const BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
 /** Timeout por defecto. El objetivo del proyecto es responder en < 1500 ms. */
 const TIMEOUT_POR_DEFECTO_MS = 10_000
 
-const CLAVE_TOKEN = 'dronedesde.sesion'
+const CLAVE_TOKEN = import.meta.env.VITE_CLAVE_TOKEN ?? 'dronedesde.sesion'
 
 export class ErrorApi extends Error {
   readonly estado: number

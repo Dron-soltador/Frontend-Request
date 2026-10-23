@@ -32,10 +32,10 @@ export interface SelectorPuntosProps {
   className?: string
 }
 
-/**
- * Convierte los clics del mapa en coordenadas. Se monta dentro de MapContainer
- * porque `useMapEvents` necesita el contexto del mapa.
- */
+/** Centro inicial: Ciudad de Buenos Aires. Solo define el encuadre de partida. */
+export const CENTRO_INICIAL_MAP: [number, number] = [-34.6037, -58.3816]
+const ZOOM_INICIAL = 13
+
 /**
  * Reajusta la vista cuando los puntos cambian sin que el usuario toque el mapa:
  * al elegir una direccion buscada o al recuperar un borrador guardado. Sin esto
@@ -118,12 +118,38 @@ function CapaSeleccion({
   return null
 }
 
-/**
- * Mapa 2D de OpenStreetMap para definir el Punto A (origen) y el Punto B
- * (destino). Los marcadores son arrastrables y hacer clic en cualquier punto
- * del mapa coloca el punto activo; ambos caminos actualizan las coordenadas
- * al instante, como pide el criterio de aceptacion.
+/** Convierte los clics del mapa en coordenadas. Se monta dentro de MapContainer
+ * porque `useMapEvents` necesita el contexto del mapa.
  */
+/** Se incrementa cuando los puntos cambian fuera del mapa: al elegir
+ * una direccion buscada o al recuperar un borrador guardado. Sin esto
+ * el marcador se dibuja fuera del encuadre y el cliente no ve donde quedo.
+ */
+function controlarTeselas = useCallback(
+  (evento: 'loading' | 'load' | 'tileerror') => () => {
+    if (evento === 'loading') {
+      pendientes.current += 1
+      return
+    }
+    if (evento === 'tileerror') {
+      setErrorTeselas(true)
+      setCargandoInicial(false)
+      return
+    }
+
+    pendientes.current = Math.max(0, pendientes.current - 1)
+    if (pendientes.current === 0 && primeraCarga.current) {
+      primeraCarga.current = false
+      setCargandoInicial(false)
+    }
+  },
+  [],
+)
+
+// Mapa 2D de OpenStreetMap para definir el Punto A (origen) y el Punto B
+// (destino). Los marcadores son arrastrables y hacer clic en cualquier punto
+// del mapa coloca el punto activo; ambos caminos actualizan las coordenadas
+// al instante, como pide el criterio de aceptacion.
 export function SelectorPuntos({
   origen,
   destino,
@@ -170,31 +196,6 @@ export function SelectorPuntos({
     [onChange],
   )
 
-  /**
-   * Cuenta las teselas en vuelo para quitar el overlay solo cuando la pantalla
-   * esta completa. Sin esto el mapa aparece gris y salta al cargar.
-   */
-  const controlarTeselas = useCallback(
-    (evento: 'loading' | 'load' | 'tileerror') => () => {
-      if (evento === 'loading') {
-        pendientes.current += 1
-        return
-      }
-      if (evento === 'tileerror') {
-        setErrorTeselas(true)
-        setCargandoInicial(false)
-        return
-      }
-
-      pendientes.current = Math.max(0, pendientes.current - 1)
-      if (pendientes.current === 0 && primeraCarga.current) {
-        primeraCarga.current = false
-        setCargandoInicial(false)
-      }
-    },
-    [],
-  )
-
   const distancia =
     esPuntoValido(origen) && esPuntoValido(destino)
       ? distanciaHaversineKm(origen, destino)
@@ -203,7 +204,7 @@ export function SelectorPuntos({
   return (
     <div className={`relative overflow-hidden rounded-xl ${className}`}>
       <MapContainer
-        center={[CENTRO_INICIAL.latitud, CENTRO_INICIAL.longitud]}
+        center={CENTRO_INICIAL_MAP}
         zoom={ZOOM_INICIAL}
         scrollWheelZoom
         className="h-full w-full"
@@ -239,7 +240,7 @@ export function SelectorPuntos({
               </Tooltip>
             )}
           </Marker>
-        )}
+        )
 
         {esPuntoValido(destino) && (
           <Marker
@@ -255,7 +256,7 @@ export function SelectorPuntos({
               </Tooltip>
             )}
           </Marker>
-        )}
+        )
 
         {esPuntoValido(origen) && esPuntoValido(destino) && (
           <Polyline
@@ -267,20 +268,6 @@ export function SelectorPuntos({
           />
         )}
       </MapContainer>
-
-      {cargandoInicial && !errorTeselas && <CargandoTeselas />}
-
-      {errorTeselas && (
-        <AvisoTeselas
-          mensaje="No se pudieron cargar las imagenes del mapa. Revisa tu conexion a internet."
-        />
-      )}
-
-      <BarraSuperior
-        activo={activo}
-        onActivoChange={onActivoChange}
-        distanciaKm={distancia}
-      />
     </div>
   )
 }

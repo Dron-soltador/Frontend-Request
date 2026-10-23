@@ -42,19 +42,16 @@ export function BuscadorDireccion({
   const idBase = useId()
   const listaId = `${idBase}-lista`
   const contenedor = useRef<HTMLDivElement>(null)
-const abortar = useRef<AbortController | null>(null)
-// Tras elegir una sugerencia el campo queda con la direccion completa. Si no
-// marcamos ese caso, el efecto la vuelve a consultar y el desplegable se
-// reabre solo sobre el mapa, tapando lo recien elegido.
-const omitirBusqueda = useRef(false)
+  const abortar = useRef<AbortController | null>(null)
+  const omitirBusqueda = useRef(false)
 
-/**
- * `onError` llega del contexto de avisos y cambia de identidad cada vez que se
- * muestra un toast. Si fuera dependencia del efecto de busqueda, cada mensaje de
- * confirmacion dispararia una consulta nueva y reabriria el desplegable.
- */
-const onErrorRef = useRef(onError)
-onErrorRef.current = onError
+  /**
+   * `onError` llega del contexto de avisos y cambia de identidad cada vez que se
+   * muestra un toast. Si fuera dependencia del efecto de busqueda, cada mensaje de
+   * confirmacion dispararia una consulta nueva y reabriria el desplegable.
+   */
+  const onErrorRef = useRef(onError)
+  onErrorRef.current = onError
 
   // Si el punto cambia desde afuera (por ejemplo al cargar una direccion guardada),
   // el campo se sincroniza.
