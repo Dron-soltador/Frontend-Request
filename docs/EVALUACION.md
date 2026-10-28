@@ -15,6 +15,8 @@
 | Aprobado (semáforo) | **NO** |
 | Código (LOC) | 3,827 |
 | Archivos de código | 37 |
+| Tests (archivos) | 0 |
+| Cobertura de líneas | no medible (mínimo 80%) |
 | Capas detectadas | vistas |
 
 > **Aprobado** exige cumplir **todos** los criterios del semáforo. No es una nota: sirve para ordenar y priorizar la revisión.
@@ -55,7 +57,7 @@ Cada aspecto indica **qué mide**, **por qué importa** y **tu resultado**. Cuan
 
 - **Qué mide:** Porcentaje de bloques de código repetidos (similitud) en el repositorio.
 - **Por qué importa:** Cada copia se mantiene por separado: un arreglo hay que repetirlo y los defectos se multiplican.
-- **Tu resultado:** **12.1%** de duplicación _(máximo 15%)_
+- **Tu resultado:** **7.0%** de duplicación _(máximo 15%)_
 
 ### 3. Secretos hardcodeados (SEC) — A REVISAR
 
@@ -135,15 +137,15 @@ Cada aspecto indica **qué mide**, **por qué importa** y **tu resultado**. Cuan
 - **Por qué importa:** Piezas muy enlazadas hacen que un cambio se propague y que sea difícil reemplazar partes.
 - **Tu resultado:** **1** unidad(es) con acoplamiento alto _(máximo 2 por 1000 LOC)_
 
-### 14. Tests automatizados (Tests) — A REVISAR
+### 14. Cobertura de tests (Cob) — A REVISAR
 
-- **Qué mide:** Cantidad de archivos de test separados del código.
-- **Por qué importa:** Sin tests no hay red de seguridad: un cambio puede romper algo sin que se note hasta la demo.
-- **Tu resultado:** **0** archivo(s) de test _(mínimo 5)_
+- **Qué mide:** Porcentaje de líneas de código ejecutadas por la suite de tests (cobertura real, no cantidad de archivos de test).
+- **Por qué importa:** Un test que existe pero no ejecuta el código no protege de nada: la cobertura muestra qué partes quedan sin verificar.
+- **Tu resultado:** **no medible** (sin tests, sin runner o sin artefacto de cobertura) _(mínimo 80% de líneas)_
 - **Para investigar la causa:**
-    - ¿Se planificó escribir tests, o quedó siempre al final?
-    - ¿Qué parte del sistema es más riesgosa de tocar y por qué no está cubierta?
-    - ¿Se sabe qué se rompería si algo cambiara?
+    - ¿Qué módulos o ramas del sistema nunca se ejecutan en los tests?
+    - ¿Los tests prueban el camino principal y los errores, o solo el caso feliz?
+    - ¿La suite se puede correr en CI sin base de datos ni servicios externos?
 
 ### 15. Vistas del frontend (Vistas) — OK
 
@@ -161,7 +163,7 @@ Criterios que hoy están en rojo y qué habría que cambiar para alcanzar el niv
 | Secretos hardcodeados (SEC) | **2** secreto(s) hardcodeado(s) | máximo 0 | Leer credenciales de variables de entorno o del gestor de secretos y sacarlas del código; 0 casos. |
 | Separación en capas (capas) | **1** capa(s) detectada(s): vistas | mínimo 2 capas (a partir de 150 LOC) | Separar el código en al menos 2 capas con responsabilidades claras (rutas/controladores, servicios, modelos o acceso a datos). |
 | Componente demasiado grande (BigC) | **6** componente(s) demasiado grande(s) | máximo 1 | Dividir el componente por responsabilidad en subcomponentes; ≤1 componente grande. |
-| Tests automatizados (Tests) | **0** archivo(s) de test | mínimo 5 | Agregar tests de los flujos principales hasta llegar a 5 archivos. |
+| Cobertura de tests (Cob) | **no medible** (sin tests, sin runner o sin artefacto de cobertura) | mínimo 80% de líneas | Publicar cobertura (o correr la suite con coverage) y cubrir ≥80% de líneas. |
 
 > Empezá por las señales de seguridad (**SEC**, **SQL**) y por la **duplicación**: son las que más pesan en el índice y las más rápidas de verificar a ojo.
 
