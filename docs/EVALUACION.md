@@ -10,7 +10,7 @@
 | Aspecto | Resultado |
 |---|---|
 | Tipo de proyecto | frontend |
-| Índice de calidad de servicios | **8/100** (mínimo 60) |
+| Índice de calidad de servicios | **13/100** (mínimo 60) |
 | Criterios cumplidos | **10/15** |
 | Aprobado (semáforo) | **NO** |
 | Código (LOC) | 3,827 |
@@ -47,7 +47,7 @@ Cada aspecto indica **qué mide**, **por qué importa** y **tu resultado**. Cuan
 
 - **Qué mide:** Un resumen numérico (0-100) que combina todas las señales y métricas del análisis, con topes duros por duplicación.
 - **Por qué importa:** Ordena y prioriza la revisión: un índice bajo indica varias señales que conviene mirar juntas.
-- **Tu resultado:** índice **8/100** _(mínimo 60)_
+- **Tu resultado:** índice **13/100** _(mínimo 60)_
 - **Para investigar la causa:**
     - ¿En qué momento del proyecto se concentraron los problemas (arranque, integración de partes, cierre)?
     - ¿El índice bajó por muchas señales chicas o por una o dos graves?
@@ -159,7 +159,7 @@ Criterios que hoy están en rojo y qué habría que cambiar para alcanzar el niv
 
 | Criterio | Resultado actual | Meta | Qué arreglar |
 |---|---|---|---|
-| Índice de calidad de servicios (indice) | índice **8/100** | mínimo 60 | Subir el índice a ≥60 corrigiendo primero las señales de más peso: duplicación, secretos, SQL y capas. |
+| Índice de calidad de servicios (indice) | índice **13/100** | mínimo 60 | Subir el índice a ≥60 corrigiendo primero las señales de más peso: duplicación, secretos, SQL y capas. |
 | Secretos hardcodeados (SEC) | **2** secreto(s) hardcodeado(s) | máximo 0 | Leer credenciales de variables de entorno o del gestor de secretos y sacarlas del código; 0 casos. |
 | Separación en capas (capas) | **1** capa(s) detectada(s): vistas | mínimo 2 capas (a partir de 150 LOC) | Separar el código en al menos 2 capas con responsabilidades claras (rutas/controladores, servicios, modelos o acceso a datos). |
 | Componente demasiado grande (BigC) | **6** componente(s) demasiado grande(s) | máximo 1 | Dividir el componente por responsabilidad en subcomponentes; ≤1 componente grande. |
