@@ -3,7 +3,7 @@
 
 > Documento **generado automáticamente** por la cátedra de Programación III (RepoSense + análisis de calidad + constancia). **No editar a mano**: se regenera en cada evaluación.
 > Rama evaluada: `main`. Análisis **heurístico** (regex + métricas): es una criba para orientar la revisión, **no una nota**.
-> Generado: 2026-11-05.
+> Generado: 2026-11-06.
 
 ## 1. Veredicto
 
@@ -13,9 +13,9 @@
 | Índice de calidad de servicios | **50/100** (mínimo 50) |
 | Criterios cumplidos | **12/14** |
 | Aprobado (semáforo) | **NO** |
-| Código (LOC) | 3,827 |
-| Archivos de código | 37 |
-| Tests (archivos) | 0 |
+| Código (LOC) | 3,905 |
+| Archivos de código | 39 |
+| Tests (archivos) | 5 |
 | Cobertura de líneas | no aplica (frontend sin herramienta de cobertura E2E) |
 | Capas detectadas | vistas |
 
@@ -25,7 +25,7 @@
 
 | Autor | Commits | Código (LOC) | Tests (LOC) | Docs (LOC) | Días activos | % del código |
 |---|---:|---:|---:|---:|---:|---:|
-| MerceMaron | 7 | 4,382 | 0 | 314 | 4 | 100% |
+| MerceMaron | 8 | 4,466 | 401 | 314 | 6 | 100% |
 
 > _El LOC de autoría lo calcula RepoSense sobre el historial y puede diferir del LOC de código del análisis de calidad (que mira solo el estado de `main`)._
 
@@ -35,7 +35,7 @@
 
 | Alumno | Sesiones | Cumplimiento | Pausa | Recencia | IC | Nivel | Para subir de nivel |
 |---|--:|--:|--:|--:|--:|--|--|
-| MerceMaron | 7 | 30% | 30 d | 0% | **20** | No aprueba | Cumplimiento 30% (mín. 50%); Recencia 0% (mín. 50%) |
+| MerceMaron | 8 | 35% | 30 d | 7% | **24** | No aprueba | Cumplimiento 35% (mín. 50%); Recencia 7% (mín. 50%) |
 
 > Para aprobar el IC: **2 sesiones por semana** sostenidas, sin pausas mayores a **10 días** y con actividad en las **últimas 2 semanas**. Se excluyen merges, bots y al docente. Zona horaria UTC-3.
 
@@ -115,13 +115,13 @@ Cada aspecto indica **qué mide**, **por qué importa** y **tu resultado**. Cuan
 
 - **Qué mide:** Complejidad ciclomática: cantidad de caminos posibles dentro de una función (condicionales, bucles, casos).
 - **Por qué importa:** Muchos caminos = difícil de seguir y de probar; suelen esconderse casos sin cubrir.
-- **Tu resultado:** **19** bloque(s) de complejidad alta _(máximo 5 por 1000 LOC (tenés 3827 LOC))_
+- **Tu resultado:** **17** bloque(s) de complejidad alta _(máximo 5 por 1000 LOC (tenés 3905 LOC))_
 
 ### 12. Funciones/métodos largos o con muchos parámetros (Tam) — OK
 
 - **Qué mide:** Tamaño de las funciones/métodos y cantidad de parámetros.
 - **Por qué importa:** Una función que hace varias cosas cuesta leerla, nombrarla y reutilizarla.
-- **Tu resultado:** **18** función/método(s) largos o con muchos parámetros _(máximo 10 por 1000 LOC)_
+- **Tu resultado:** **16** función/método(s) largos o con muchos parámetros _(máximo 10 por 1000 LOC)_
 
 ### 13. Acoplamiento alto (Acop) — OK
 
@@ -145,8 +145,6 @@ Criterios que hoy están en rojo y, para cada uno, una explicación breve de **c
 | Componente demasiado grande (BigC) | **6** componente(s) demasiado grande(s) | máximo 1 | 5 componente(s) de más | Dividí el componente por responsabilidad en subcomponentes (render, estado, acceso a datos) y dejá el original sólo como orquestador. Meta: ≤1 componente grande. |
 
 > Empezá por las señales de seguridad (**SEC**, **SQL**) y por la **duplicación**: son las que más pesan en el índice y las más rápidas de verificar a ojo. Después de corregir, volvé a correr la medición: el semáforo se recalcula sobre `main`.
-
-> **Tests (informativo):** hoy tenés **0** archivo(s) de test; la meta es **5**, pero **no** es una compuerta del semáforo. Para acercarte, agregá tests de los flujos principales (servicios y endpoints) y corré la suite con coverage.
 
 ## 6. Anexo: dónde mirar
 
