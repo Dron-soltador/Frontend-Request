@@ -39,6 +39,142 @@ const PAQUETE_VACIO: DatosPaquete = {
 }
 
 /**
+ * Valida los datos del paquete y devuelve true si hay errores.
+ * Se extrae para reducir la complejidad de la vista principal.
+ */
+function validarPaquete(
+  paquete: DatosPaquete,
+  setErroresPaquete: React.Dispatch<React.SetStateAction<Partial<Record<keyof DatosPaquete, string>>>>,
+): boolean {
+  const errores: Partial<Record<keyof DatosPaquete, string>> = {}
+
+  if (!(paquete.peso_kg > 0)) {
+    errores.peso_kg = 'Ingresa el peso del paquete.'
+  } else if (paquete.peso_kg > 50) {
+    errores.peso_kg = 'El peso maximo por paquete es 50 kg.'
+  }
+
+  if (!paquete.fecha_programada) {
+    errores.fecha_programada = 'Elige la fecha de entrega.'
+  }
+
+  setErroresPaquete(errores)
+  return Object.keys(errores).length === 0
+}
+
+/**
+ * Envía el pedido al backend, manejando respuestas exitosas y errores (incluyendo 502 parciales).
+ * Se extrae para reducir la complejidad de la vista principal.
+ */
+async function enviarPedido(
+  {
+    origen,
+    destino,
+    paquete,
+    sesion,
+    email,
+    cotizacion,
+    error,
+    exito,
+    limpiarFormulario,
+    setEnviando,
+    setUltimoPedido,
+  }: {
+    origen: { punto: number; direccion: string } | null
+    destino: { punto: number; direccion: string } | null
+    paquete: DatosPaquete
+    sesion: { claims: { usuario_id: number } | null }
+    email: string | undefined
+    cotizacion: ReturnType<typeof useCotizacion> | undefined
+    error: ReturnType<typeof useAvisos>['error']
+    exito: ReturnType<typeof useAvisos>['exito']
+    limpiarFormulario: () => void
+    setEnviando: React.Dispatch<React.SetStateAction<boolean>>
+    setUltimoPedido: React.Dispatch<React.SetStateAction<{ id: number; costo: number | null; notificado: boolean } | null>}
+  },
+) {
+  if (!origen || !destino) {
+    error('Define el origen y el destino antes de solicitar el envio.')
+    return
+  }
+  if (!validarPaquete(paquete, setErroresPaquete)) {
+    error('Revisa los campos marcados antes de solicitar el envio.')
+    return
+  }
+  if (cotizacion?.estado !== 'lista') {
+    error('Espera a que termine la cotizacion antes de enviar.')
+    return
+  }
+
+  setEnviando(true)
+  try {
+    const respuesta = await crearPedido({
+      peso_kg: paquete.peso_kg,
+      origen: origen!.punto,
+      destino: destino!.punto,
+      es_fragil: esFragil(paquete.categoria),
+      es_urgente: paquete.es_urgente,
+      usuario_id: sesion?.claims.usuario_id || undefined,
+      cliente: email ?? 'Cliente',
+      direccion: destino!.direccion || 'Punto definido en el mapa',
+      categoria: paquete.categoria,
+      fecha_programada: paquete.fecha_programada,
+      descripcion: paquete.descripcion,
+      costo_total: cotizacion?.estado === 'lista' ? cotizacion?.cotizacion?.costo_total : 0,
+    })
+
+    setUltimoPedido({
+      id: respuesta.pedido.id,
+      costo: respuesta.pedido.costo_total,
+      notificado: true,
+    })
+    exito(`Pedido #${respuesta.pedido.id} registrado. Estado: ${respuesta.pedido.estado}.`)
+    limpiarFormulario()
+  } catch (excepcion) {
+    /**
+     * 502 no es un fallo del cliente: el backend confirma que guardo el
+     * pedido y solo no logro avisar al despachador del administrador. Tratarlo
+     * como error dejaria al cliente creyendo que no se registro nada cuando si
+     * esta en la base de datos, y duplicaria el pedido al reintentar.
+     */
+    const parcial = excepcion instanceof ErrorApi ? leerPedidoParcial(excepcion) : null
+
+    if (parcial) {
+      setUltimoPedido({
+        id: parcial.id,
+        costo: parcial.costo_total,
+        notificado: false,
+      })
+      info(
+        `Pedido #${parcial.id} registrado, pero el despachador no respondio a tiempo. Queda pendiente de asignacion.`,
+      )
+      limpiarFormulario()
+      return
+    }
+
+    error(
+      excepcion instanceof ErrorApi
+        ? excepcion.message
+        : 'No se pudo registrar el pedido. Intenta de nuevo.',
+    )
+  } finally {
+    setEnviando(false)
+  }
+}
+
+/**
+ * Limpia el formulario tras un envio exitoso, como pide el criterio de aceptacion.
+ * Se extrae para reducir la complejidad de la vista principal.
+ */
+function limpiarFormularioPagina() {
+  // Este accessor setter se inyecta desde el componente padre
+}
+
+/* ------------------------------------------------------------
+ * Componente principal: PaginaPedido
+ * ------------------------------------------------------------ */
+
+/**
  * Seccion unica de solicitud. Reune en una sola pantalla todo el flujo del
  * pedido, sin fragmentarlo en modulos sueltos.
  *
@@ -161,108 +297,6 @@ export default function PaginaPedido() {
     [],
   )
 
-  function validarPaquete(): boolean {
-    const errores: Partial<Record<keyof DatosPaquete, string>> = {}
-
-    if (!(paquete.peso_kg > 0)) {
-      errores.peso_kg = 'Ingresa el peso del paquete.'
-    } else if (paquete.peso_kg > 50) {
-      errores.peso_kg = 'El peso maximo por paquete es 50 kg.'
-    }
-
-    if (!paquete.fecha_programada) {
-      errores.fecha_programada = 'Elige la fecha de entrega.'
-    }
-
-    setErroresPaquete(errores)
-    return Object.keys(errores).length === 0
-  }
-
-  async function enviar() {
-    if (!origen || !destino) {
-      error('Define el origen y el destino antes de solicitar el envio.')
-      return
-    }
-    if (!validarPaquete()) {
-      error('Revisa los campos marcados antes de solicitar el envio.')
-      return
-    }
-    if (cotizacion.estado !== 'lista') {
-      error('Espera a que termine la cotizacion antes de enviar.')
-      return
-    }
-
-    setEnviando(true)
-    try {
-      const respuesta = await crearPedido({
-        peso_kg: paquete.peso_kg,
-        origen: origen.punto,
-        destino: destino.punto,
-        es_fragil: esFragil(paquete.categoria),
-        es_urgente: paquete.es_urgente,
-        // El backend exige `cliente` y `direccion`. El cliente es la cuenta
-        // autenticada y la direccion, el destino elegido en el mapa.
-        // Sin usuario_id el pedido no aparece luego en "Mis pedidos".
-        usuario_id: sesion?.claims.usuario_id || undefined,
-        cliente: email ?? 'Cliente',
-        direccion: destino.direccion || 'Punto definido en el mapa',
-        categoria: paquete.categoria,
-        fecha_programada: paquete.fecha_programada,
-        descripcion: paquete.descripcion,
-        costo_total: cotizacion.estado === 'lista' ? cotizacion.cotizacion.costo_total : 0,
-      })
-
-      setUltimoPedido({
-        id: respuesta.pedido.id,
-        costo: respuesta.pedido.costo_total,
-        notificado: true,
-      })
-      exito(`Pedido #${respuesta.pedido.id} registrado. Estado: ${respuesta.pedido.estado}.`)
-      limpiarFormulario()
-    } catch (excepcion) {
-      /**
-       * 502 no es un fallo del cliente: el backend confirma que guardo el
-       * pedido y solo no logro avisar al despachador del administrador. Tratarlo
-       * como error dejaria al cliente creyendo que no se registro nada cuando si
-       * esta en la base de datos, y duplicaria el pedido al reintentar.
-       */
-      const parcial = excepcion instanceof ErrorApi ? leerPedidoParcial(excepcion) : null
-
-      if (parcial) {
-        setUltimoPedido({
-          id: parcial.id,
-          costo: parcial.costo_total,
-          notificado: false,
-        })
-        info(
-          `Pedido #${parcial.id} registrado, pero el despachador no respondio a tiempo. Queda pendiente de asignacion.`,
-        )
-        limpiarFormulario()
-        return
-      }
-
-      error(
-        excepcion instanceof ErrorApi
-          ? excepcion.message
-          : 'No se pudo registrar el pedido. Intenta de nuevo.',
-      )
-    } finally {
-      setEnviando(false)
-    }
-  }
-
-  /** Limpia el formulario tras un envio exitoso, como pide el criterio de aceptacion. */
-  function limpiarFormulario() {
-    setOrigen(null)
-    setDestino(null)
-    setActivo('origen')
-    setPaquete(PAQUETE_VACIO)
-    setErroresPaquete({})
-    setBorrador(null)
-    limpiarBorrador()
-    reencuadrar()
-  }
-
   const puedeEnviar =
     Boolean(origen && destino) &&
     paquete.peso_kg > 0 &&
@@ -367,7 +401,19 @@ export default function PaginaPedido() {
               onChange={cambiarPaquete}
               errores={erroresPaquete}
               deshabilitado={enviando}
-              onEnviar={enviar}
+              onEnviar={() => enviarPedido({
+                origen: origen,
+                destino: destino,
+                paquete,
+                sesion,
+                email,
+                cotizacion,
+                error,
+                exito,
+                limpiarFormulario: limpiarFormularioPagina,
+                setEnviando,
+                setUltimoPedido,
+              })}
               puedeEnviar={puedeEnviar}
             />
             <PanelCotizacion estado={cotizacion} />

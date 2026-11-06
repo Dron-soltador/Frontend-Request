@@ -22,17 +22,20 @@ export default function PaginaRegistro() {
   const [errores, setErrores] = useState<Record<string, string>>({})
   const [enviando, setEnviando] = useState(false)
 
-  async function manejarEnvio(evento: FormEvent<HTMLFormElement>) {
-    evento.preventDefault()
-
+  function procesarValidacion() {
     const validacion = validarFormularioRegistro(email, password, confirmacion)
     if (!aceptaTerminos) {
       validacion.errores.terminos = 'Debes aceptar los terminos para crear la cuenta.'
       validacion.valido = false
     }
-
     setErrores(validacion.errores)
-    if (!validacion.valido) return
+    return validacion.valido
+  }
+
+  async function manejarEnvio(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault()
+
+    if (!procesarValidacion()) return
 
     setEnviando(true)
     try {
@@ -45,6 +48,7 @@ export default function PaginaRegistro() {
         excepcion instanceof ErrorApi
           ? excepcion.message
           : 'Ocurrio un error inesperado al crear la cuenta.'
+
       mostrarError(mensaje)
 
       // Si el conflicto es de email lo mostramos bajo el campo y no solo en el toast.

@@ -21,12 +21,16 @@ export default function PaginaLogin() {
   const [errores, setErrores] = useState<Record<string, string>>({})
   const [enviando, setEnviando] = useState(false)
 
+  function validarYMostrarErrores() {
+    const validacion = validarFormularioLogin(email, password)
+    setErrores(validacion.errores)
+    return validacion.valido
+  }
+
   async function manejarEnvio(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
 
-    const validacion = validarFormularioLogin(email, password)
-    setErrores(validacion.errores)
-    if (!validacion.valido) return
+    if (!validarYMostrarErrores()) return
 
     setEnviando(true)
     try {
