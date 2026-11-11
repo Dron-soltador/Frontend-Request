@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 
-import type { Pedido } from '../../servicios/pedidos'
+import type { Pedido } from '../../services/pedidos'
 import { EtiquetaEstado } from './EtiquetaEstado'
 import { diaProgramado, formatearDia, formatearFechaHora } from './fechas'
 

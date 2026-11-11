@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
-import { useSesion } from '../sesion/SesionContext'
+import { useSesion } from '../state/SesionContext'
 
 /**
  * Puerta de las vistas privadas. Ademas de exigir sesion, rechaza a los operadores:

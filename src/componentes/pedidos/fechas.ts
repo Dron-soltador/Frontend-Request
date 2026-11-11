@@ -1,4 +1,4 @@
-import type { Pedido } from '../../servicios/pedidos'
+import type { Pedido } from '../../services/pedidos'
 
 /**
  * Utilidades de fecha para "Mis pedidos".

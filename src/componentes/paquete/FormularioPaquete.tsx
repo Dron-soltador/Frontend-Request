@@ -1,30 +1,13 @@
 import type { FormEvent } from 'react'
 
 import { Campo } from '../formularios/Campo'
+import { CategoriasPaquete } from './CategoriasPaquete'
+import { hoy } from './modeloPaquete'
+import type { DatosPaquete } from './modeloPaquete'
+import { ToggleUrgencia } from './ToggleUrgencia'
 
-export const CATEGORIAS = [
-  { valor: 'Estandar', etiqueta: 'Estandar', descripcion: 'Sin cuidados especiales' },
-  { valor: 'Fragil', etiqueta: 'Fragil', descripcion: 'Manejo delicado, +15%' },
-] as const
-
-export interface DatosPaquete {
-  peso_kg: number
-  fecha_programada: string
-  /**
-   * Unica fuente de verdad de la fragilidad. Antes `categoria` y `es_fragil` eran
-   * dos estados independientes y ended desincronizados: el recargo se cobraba
-   * mientras el radio "Fragil" seguia marcado como "Estandar".
-   * `es_fragil` se deriva de aqui: `esFragil(categoria)`.
-   */
-  categoria: string
-  es_urgente: boolean
-  descripcion: string
-}
-
-/** El backend cobra el recargo de fragilidad a partir de `es_fragil`. */
-export function esFragil(categoria: string): boolean {
-  return categoria === 'Fragil'
-}
+export { CATEGORIAS, esFragil, PAQUETE_VACIO } from './modeloPaquete'
+export type { DatosPaquete } from './modeloPaquete'
 
 interface FormularioPaqueteProps {
   datos: DatosPaquete
@@ -39,91 +22,6 @@ interface FormularioPaqueteProps {
  * Datos del paquete. Es el paso 2 del pedido: lo que el dron va a transportar.
  * Cada cambio en peso, categoria o urgencia dispara la cotizacion en vivo.
  */
-
-/* Componentes internos */
-
-function Categorias({
-  categoria,
-  onChange,
-  deshabilitado,
-}: {
-  categoria: string
-  onChange: (valor: string) => void
-  deshabilitado: boolean
-}) {
-  return (
-    <fieldset>
-      <legend className="campo-label">Categoria del paquete</legend>
-      <div className="mt-1 grid gap-2.5 sm:grid-cols-2">
-        {CATEGORIAS.map((cat) => {
-          const activa = categoria === cat.valor
-          return (
-            <label
-              key={cat.valor}
-              className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 transition ${
-                activa ? 'border-marca-600 bg-marca-50 ring-1 ring-marca-600/30' : 'border-slate-300 bg-white hover:bg-slate-50'
-              }`}
-            >
-              <input
-                type="radio"
-                name="categoria"
-                value={cat.valor}
-                checked={activa}
-                onChange={() => onChange(cat.valor)}
-                disabled={deshabilitado}
-                className="mt-0.5 size-4 border-slate-300 text-marca-600 focus:ring-marca-600/30"
-              />
-              <span>
-                <span className="block text-sm font-medium text-slate-900">
-                  {cat.etiqueta}
-                </span>
-                <span className="block text-xs text-slate-500">{cat.descripcion}</span>
-              </span>
-            </label>
-          )
-        })}
-      </div>
-      {errores.categoria && (
-        <p className="mt-1.5 text-xs font-medium text-red-600">{errores.categoria}</p>
-      )}
-    </fieldset>
-  )
-})
-
-function ToggleUrgencia({
-  esUrgente,
-  onChange,
-  deshabilitado,
-}: {
-  esUrgente: boolean
-  onChange: (valor: boolean) => void
-  deshabilitado: boolean
-}) {
-  return (
-    <label
-      className={`flex items-start gap-3 rounded-lg border p-3.5 transition ${
-        esUrgente ? 'border-amber-400 bg-amber-50' : 'border-slate-300 bg-white hover:bg-slate-50'
-      }`}
-    >
-      <input
-        type="checkbox"
-        checked={esUrgente}
-        onChange={(evento) => onChange(evento.target.checked)}
-        disabled={deshabilitado}
-        className="mt-0.5 size-4 rounded border-slate-300 text-amber-600 focus:ring-amber-600/30"
-      />
-      <span>
-        <span className="block text-sm font-medium text-slate-900">Envio urgente</span>
-        <span className="block text-xs text-slate-500">
-          Prioridad sobre los demas pedidos. Aplica un recargo del 25%.
-        </span>
-      </span>
-    </label>
-  )
-})
-
-/* Fin componentes internos */
-
 export function FormularioPaquete({
   datos,
   onChange,
@@ -173,15 +71,16 @@ export function FormularioPaquete({
         />
       </div>
 
-      <Categorias
+      <CategoriasPaquete
         categoria={datos.categoria}
-        onChange={(valor) => onChange('categoria', valor)}
+        onCambiar={(categoria) => onChange('categoria', categoria)}
+        error={errores.categoria}
         deshabilitado={deshabilitado}
       />
 
       <ToggleUrgencia
-        esUrgente={datos.es_urgente}
-        onChange={(valor) => onChange('es_urgente', valor)}
+        urgente={datos.es_urgente}
+        onCambiar={(urgente) => onChange('es_urgente', urgente)}
         deshabilitado={deshabilitado}
       />
 
@@ -220,11 +119,4 @@ export function FormularioPaquete({
       )}
     </form>
   )
-}
-
-/** Fecha local en formato YYYY-MM-DD, para el min del input date. */
-function hoy(): string {
-  const ahora = new Date()
-  const desfase = ahora.getTimezoneOffset() * 60_000
-  return new Date(ahora.getTime() - desfase).toISOString().slice(0, 10)
 }

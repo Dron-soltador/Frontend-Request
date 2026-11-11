@@ -167,7 +167,7 @@ Sobre el mapa:
 
 #### Búsqueda de direcciones
 
-`BuscadorDireccion.tsx` + `servicios/geocodificacion.ts`. Usa **Nominatim**, el buscador oficial
+`BuscadorDireccion.tsx` + `services/geocodificacion.ts`. Usa **Nominatim**, el buscador oficial
 de OpenStreetMap, para no depender de una API de pago. Escribe el cliente, aparecen las
 coincidencias y al elegir una el marcador salta a esa ubicación.
 
@@ -182,10 +182,10 @@ coincidencias y al elegir una el marcador salta a esa ubicación.
 
 Dos mecanismos distintos, con responsabilidades separadas:
 
-- `sesion/borrador.ts` (`dronedesde.pedido.borrador`): el **pedido en curso**. Se escribe solo al
+- `state/borrador.ts` (`dronedesde.pedido.borrador`): el **pedido en curso**. Se escribe solo al
   pulsar "Guardar pedido" y se recupera al volver a la sección. Si el cliente cierra la pestaña
   sin enviar, el borrador se pierde a propósito: no dejamos pedidos a medias en la base de datos.
-- `sesion/localizacion.ts` (`dronedesde.ubicacion.guardadas`): las **direcciones reutilizables** a
+- `state/localizacion.ts` (`dronedesde.ubicacion.guardadas`): las **direcciones reutilizables** a
   largo plazo. El cliente las nombra ("Casa", "Oficina", "Depósito"), las recupera con un clic y
   las elimina cuando quiere. Si guarda dos con el mismo nombre, se actualiza la existente en
   lugar de duplicarla.
@@ -240,8 +240,8 @@ Fuera de alcance según la issue: pasarela de cobro bancaria real.
 | El usuario se registra correctamente y es redirigido al panel del cliente tras el login | `PaginaRegistro.tsx` encadena `POST /auth/register` + `POST /auth/login` y navega a `/panel` |
 | Errores de autenticación se muestran mediante mensajes emergentes | `Avisos.tsx` (toasts accesibles con `role="alert"`), alimentados por `ErrorApi` |
 | Formularios responsivos | Layout de dos columnas en escritorio, columna única en móvil (verificado a 390 px sin scroll horizontal) |
-| Conexión con `POST /auth/login` y `POST /auth/register` | `src/servicios/auth.ts` |
-| Sesión en LocalStorage | `SesionContext.tsx` + `sesion/token.ts` |
+| Conexión con `POST /auth/login` y `POST /auth/register` | `src/services/auth.ts` |
+| Sesión en LocalStorage | `SesionContext.tsx` + `state/token.ts` |
 
 Fuera de alcance según la issue: recuperación de contraseña por SMS o correo.
 
@@ -266,18 +266,32 @@ Otros comandos: `npm run build` (bundle de producción), `npm run typecheck` (Ty
 
 ```
 src/
-├── servicios/
+├── services/                 Capa de servicios: unico punto de acceso a la API
 │   ├── clienteHttp.ts        Cliente HTTP: timeouts, token Bearer y errores homogeneos
-│   └── auth.ts               Contrato de /auth/login y /auth/register
-├── sesion/
+│   ├── pedidos.ts            Contrato de /api/v1/pedidos (cotizar, alta e historial)
+│   ├── geocodificacion.ts    Nominatim: busqueda de direcciones
+│   ├── auth.ts               Contrato de /auth/login y /auth/register
+│   └── index.ts              Barril publico de la capa
+├── state/                    Capa de estado y persistencia local
 │   ├── token.ts              Decodificacion y expiracion del JWT
-│   └── SesionContext.tsx     Sesion persistida en localStorage
-├── componentes/
-│   ├── mapa/                 SelectorPuntos (Leaflet + OSM), marcadores y geometria
+│   ├── SesionContext.tsx     Sesion persistida en localStorage
+│   ├── borrador.ts           Pedido en curso
+│   └── localizacion.ts       Direcciones habituales reutilizables
+├── hooks/                    Logica de UI reutilizable, sin JSX
+│   ├── useCotizacion.ts      Tarifa en vivo con antirrebote y cancelacion
+│   ├── usePuntosPedido.ts    Estado de los puntos A/B y reencuadre
+│   ├── useBorradorPedido.ts  Borrador y direcciones guardadas
+│   ├── useEnvioPedido.ts     Alta del pedido y manejo del 502 parcial
+│   └── usePedidosUsuario.ts  Historial y filtros de "Mis pedidos"
+├── componentes/              Componentes de presentacion por dominio
+│   ├── mapa/                 SelectorPuntos (Leaflet + OSM), buscador y geometria
+│   ├── paquete/              FormularioPaquete, categorias y PanelCotizacion
+│   ├── pedido/               Secciones del flujo de solicitud
+│   ├── pedidos/              Calendario, tabla y resumen del historial
 │   ├── avisos/               Toasts de exito / error / info
 │   ├── formularios/          Campo reutilizable y reglas de validacion
 │   └── ui/
-├── paginas/                  Login, Registro, Panel, Puntos, Sin acceso, 404
+├── paginas/                  Login, Registro, Panel, Pedido, Mis pedidos, Sin acceso, 404
 └── rutas/Guardias.tsx        Rutas protegidas y publicas segun rol
 ```
 

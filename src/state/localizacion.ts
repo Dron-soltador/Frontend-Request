@@ -3,7 +3,7 @@ import type { Punto } from '../componentes/mapa/geometria'
 /**
  * Direcciones que el cliente reutiliza entre envios ("Casa", "Oficina", "Deposito").
  *
- * Es distinto del borrador del pedido (`sesion/borrador.ts`): aqui viven
+ * Es distinto del borrador del pedido (`state/borrador.ts`): aqui viven
  * direcciones reutilizables a largo plazo, no los datos de un pedido en curso.
  * Ninguno de los dos toca el microservicio; el guardado definitivo en PostgreSQL
  * corresponde al alta del pedido, que es la issue del formulario de solicitud.

@@ -13,7 +13,7 @@ describe('validacion', () => {
 
     it('debe rechazar formato invalido', () => {
       expect(validarEmail('usuario@')).toBe('El formato del correo no es valido.')
-      expect(validarEmail('usuario').toBe('El formato del correo no es valido.')
+      expect(validarEmail('usuario')).toBe('El formato del correo no es valido.')
       expect(validarEmail('usario@dominio')).toBe('El formato del correo no es valido.')
     })
   })

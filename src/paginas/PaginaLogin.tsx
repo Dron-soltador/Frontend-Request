@@ -6,8 +6,8 @@ import { Campo } from '../componentes/formularios/Campo'
 import { Spinner } from '../componentes/ui/Spinner'
 import { validarFormularioLogin } from '../componentes/formularios/validacion'
 import { useAvisos } from '../componentes/avisos/ProveedorAvisos'
-import { ErrorApi } from '../servicios/clienteHttp'
-import { useSesion } from '../sesion/SesionContext'
+import { ErrorApi } from '../services/clienteHttp'
+import { useSesion } from '../state/SesionContext'
 import { LayoutAutenticacion } from './LayoutAutenticacion'
 
 export default function PaginaLogin() {
@@ -21,16 +21,12 @@ export default function PaginaLogin() {
   const [errores, setErrores] = useState<Record<string, string>>({})
   const [enviando, setEnviando] = useState(false)
 
-  function validarYMostrarErrores() {
-    const validacion = validarFormularioLogin(email, password)
-    setErrores(validacion.errores)
-    return validacion.valido
-  }
-
   async function manejarEnvio(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
 
-    if (!validarYMostrarErrores()) return
+    const validacion = validarFormularioLogin(email, password)
+    setErrores(validacion.errores)
+    if (!validacion.valido) return
 
     setEnviando(true)
     try {

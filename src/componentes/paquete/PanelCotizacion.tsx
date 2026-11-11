@@ -1,5 +1,5 @@
-import type { Cotizacion } from '../../servicios/pedidos'
-import type { EstadoCotizacion } from './useCotizacion'
+import type { Cotizacion } from '../../services/pedidos'
+import type { EstadoCotizacion } from '../../hooks/useCotizacion'
 
 /**
  * Panel de la tarifa. Muestra el desglose que devuelve el cotizador del
