@@ -9,7 +9,7 @@ import PaginaPedido from './paginas/PaginaPedido'
 import PaginaRegistro from './paginas/PaginaRegistro'
 import PaginaSinAcceso from './paginas/PaginaSinAcceso'
 import { RutaProtegida, RutaPublica } from './rutas/Guardias'
-import { ProveedorSesion } from './sesion/SesionContext'
+import { ProveedorSesion } from './state/SesionContext'
 
 export default function App() {
   return (

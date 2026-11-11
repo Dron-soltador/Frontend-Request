@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 
-import { useSesion } from '../sesion/SesionContext'
+import { useSesion } from '../state/SesionContext'
 
 /**
  * Pantalla para cuando el token es valido pero no habilita este portal (rol operador,

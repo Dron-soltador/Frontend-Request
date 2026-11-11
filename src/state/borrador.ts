@@ -11,7 +11,7 @@ import type { PuntoEtiquetado } from './localizacion'
  * dejamos pedidos a medias en la base de datos.
  */
 
-const CLAVE = 'dronedesfrom.pedido.borrador'
+const CLAVE = 'dronedesde.pedido.borrador'
 
 export interface BorradorPedido {
   origen: PuntoEtiquetado | null
@@ -60,7 +60,7 @@ export function limpiarBorrador(): void {
   localStorage.removeItem(CLAVE)
 }
 
-/** Indica si el borrador guardado difiere de los puntos actuales. */
+/** ¿Los puntos actuales coinciden con lo guardado? Si no, hay cambios sin guardar. */
 export function hayCambiosSinGuardar(
   borrador: BorradorPedido | null,
   origen: PuntoEtiquetado | null,
@@ -68,12 +68,12 @@ export function hayCambiosSinGuardar(
 ): boolean {
   if (!borrador) return true
 
-  return !puntosIguales(borrador.origen, origen) || !puntosIguales(borrador.destino, destino)
-}
+  const iguales = (a: PuntoEtiquetado | null, b: PuntoEtiquetado | null) =>
+    a?.punto.latitud === b?.punto.latitud &&
+    a?.punto.longitud === b?.punto.longitud &&
+    a?.direccion === b?.direccion
 
-function puntosIguales(a: PuntoEtiquetado | null, b: PuntoEtiquetado | null): boolean {
-  if (!a || !b) return false
-  return a.punto.latitud === b.punto.latitud && a.punto.longitud === b.punto.longitud && a.direccion === b.direccion
+  return !iguales(borrador.origen, origen) || !iguales(borrador.destino, destino)
 }
 
 /** "hace 3 min" a partir de una fecha ISO, para la etiqueta del borrador. */

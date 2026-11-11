@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { cotizar } from '../../servicios/pedidos'
-import type { Cotizacion, DatosCotizacion } from '../../servicios/pedidos'
+import { cotizar } from '../services/pedidos'
+import type { Cotizacion, DatosCotizacion } from '../services/pedidos'
 
 /** Espera antes de pedir la tarifa: el usuario deja de escribir mientras corre. */
 const ANTIRREBOTE_MS = 400
@@ -11,24 +11,6 @@ export type EstadoCotizacion =
   | { estado: 'calculando' }
   | { estado: 'lista'; cotizacion: Cotizacion }
   | { estado: 'error'; mensaje: string }
-
-/**
- * Serializa los datos de cotizacion para compararlos entre renders.
- * Devuelve cadena vacia cuando aun no hay puntos ni peso.
- */
-export function claveCotizacion(datos: DatosCotizacion | null): string {
-  if (!datos) return ''
-  const { peso_kg, origen, destino, es_fragil, es_urgente } = datos
-  return [
-    peso_kg,
-    origen.latitud,
-    origen.longitud,
-    destino.latitud,
-    destino.longitud,
-    es_fragil ? 1 : 0,
-    es_urgente ? 1 : 0,
-  ].join('|')
-}
 
 /**
  * Cotizacion instantanea: cada vez que cambian el peso, la categoria, la
@@ -89,9 +71,25 @@ export function useCotizacion(clave: string, datos: DatosCotizacion | null) {
     }
     // `clave` representa a `datos`: incluir el objeto aqui reintentaria la
     // peticion en cada render.
-  }, [clave, datos])
-```
+  }, [clave, datos, pedir])
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   return estado
+}
+
+/**
+ * Serializa los datos de cotizacion para compararlos entre renders.
+ * Devuelve cadena vacia cuando aun no hay puntos ni peso.
+ */
+export function claveCotizacion(datos: DatosCotizacion | null): string {
+  if (!datos) return ''
+  const { peso_kg, origen, destino, es_fragil, es_urgente } = datos
+  return [
+    peso_kg,
+    origen.latitud,
+    origen.longitud,
+    destino.latitud,
+    destino.longitud,
+    es_fragil ? 1 : 0,
+    es_urgente ? 1 : 0,
+  ].join('|')
 }

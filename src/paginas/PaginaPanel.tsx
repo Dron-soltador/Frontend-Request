@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 
 import { Marca } from './LayoutAutenticacion'
-import { useSesion } from '../sesion/SesionContext'
+import { useSesion } from '../state/SesionContext'
 
 /**
  * Cabecera del portal del cliente. El cuerpo es un marcador de posicion; los

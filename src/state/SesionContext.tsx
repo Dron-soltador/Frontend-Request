@@ -1,9 +1,9 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 
-import { iniciarSesion, registrar } from '../servicios/auth'
-import type { Credenciales } from '../servicios/auth'
-import { guardarToken, leerToken, limpiarToken } from '../servicios/clienteHttp'
+import { iniciarSesion, registrar } from '../services/auth'
+import type { Credenciales } from '../services/auth'
+import { guardarToken, leerToken, limpiarToken } from '../services/clienteHttp'
 import { esCliente, leerClaims, sesionExpirada } from './token'
 import type { ClaimsToken } from './token'
 
