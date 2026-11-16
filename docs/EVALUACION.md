@@ -3,7 +3,7 @@
 
 > Documento **generado automáticamente** por la cátedra de Programación III (RepoSense + análisis de calidad + constancia). **No editar a mano**: se regenera en cada evaluación.
 > Rama evaluada: `main`. Análisis **heurístico** (regex + métricas): es una criba para orientar la revisión, **no una nota**.
-> Generado: 2026-11-14.
+> Generado: 2026-11-16.
 
 ## 1. Veredicto
 
@@ -36,7 +36,7 @@
 
 | Alumno | Sesiones | Cumplimiento | Pausa | Recencia | IC | Nivel | Para subir de nivel |
 |---|--:|--:|--:|--:|--:|--|--|
-| MerceMaron | 11 | 42% | 30 d | 100% | **41** | No aprueba | Cumplimiento 42% (mín. 50%) |
+| MerceMaron | 11 | 41% | 30 d | 79% | **37** | No aprueba | Cumplimiento 41% (mín. 50%) |
 
 > Para aprobar el IC: **2 sesiones por semana** sostenidas, sin pausas mayores a **10 días** y con actividad en las **últimas 2 semanas**. Se excluyen merges, bots y al docente. Zona horaria UTC-3.
 
@@ -170,7 +170,11 @@ _Cumple **todos** los criterios del semáforo: no hay nada que arreglar para apr
 | 2026-11-11 | **Sí** | Frontend-Gestionador | 2 / 1 |
 | 2026-11-13 | **Sí** | Backend-Gestionador, Frontend-Gestionador | 1 / 2 |
 
-**Fuera de clase:** sin actividad registrada.
+**Fuera de clase:** 1 fecha(s) con actividad · 1 commits · 1 merges
+
+| Fecha | Repositorios | Commits / merges |
+|---|---|--:|
+| 2026-11-14 | Frontend-Gestionador | 1 / 1 |
 
 ### MerceMaron
 
